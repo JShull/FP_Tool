@@ -12,8 +12,8 @@ namespace FuzzPhyte.Tools.Samples
     public class FP_MeasureLine : MonoBehaviour, IFPToolListener<FP_MeasureToolData>
     {
         protected FP_Tool<FP_MeasureToolData> myTool;
-        public GameObject FirstPoint;
-        public GameObject SecondPoint;
+        public RectTransform FirstPoint;
+        public RectTransform SecondPoint;
         public TextMeshProUGUI MeasurementText;
         public LineRenderer LineRenderer;
         public void SetupLine(FP_Tool<FP_MeasureToolData> theTool)
@@ -31,17 +31,19 @@ namespace FuzzPhyte.Tools.Samples
             myTool.OnEnding += OnToolEnding;
             myTool.OnDeactivated += OnToolDeactivated;
         }
-        public virtual void DropFirstPoint(Vector3 position)
+
+        public virtual void DropFirstPoint(Vector2 position)
         {
-            FirstPoint.transform.position = position;
-            FirstPoint.SetActive(true);
+            FirstPoint.localPosition = position;
+            FirstPoint.gameObject.SetActive(true);
+            SecondPoint.gameObject.SetActive(true);
             LineRenderer.SetPosition(0, position);
             LineRenderer.SetPosition(1, position);
         }
-        public virtual void DropSecondPoint(Vector3 position)
+        public virtual void DropSecondPoint(Vector2 position)
         {
-            SecondPoint.transform.position = position;
-            SecondPoint.SetActive(true);
+            SecondPoint.localPosition = position;
+            LineRenderer.SetPosition(1, position);
         }
         public void OnDestroy()
         {
@@ -73,6 +75,14 @@ namespace FuzzPhyte.Tools.Samples
         public void OnToolDeactivated(FP_Tool<FP_MeasureToolData> tool)
         {
             if(tool != myTool) return;
+        }
+        public void UpdateTextInformation(string text)
+        {
+            MeasurementText.text = text;
+        }
+        public void UpdateTextLocation(Vector2 coordinate)
+        {
+            MeasurementText.rectTransform.anchoredPosition = coordinate;
         }
     }
 }

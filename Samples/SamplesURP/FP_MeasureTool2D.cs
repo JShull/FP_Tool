@@ -1,5 +1,6 @@
 namespace FuzzPhyte.Tools
 {
+    using FuzzPhyte.Tools.Samples;
     //JOHN NEED TO TRANSITION FROM THIS LINE RENDERER TO THE FP_MEASURELINE
     using System.Collections.Generic;
     using UnityEngine;
@@ -12,8 +13,8 @@ namespace FuzzPhyte.Tools
         [SerializeField] protected RectTransform canvasRect;
         [Tooltip("Where do we want our measurements to be saved under")]
         [SerializeField] protected RectTransform measurementParentSpace;
-        [SerializeField] protected LineRenderer lineRenderer;
-        [SerializeField] protected Text measurementText;
+        //[SerializeField] protected LineRenderer lineRenderer;
+        //[SerializeField] protected Text measurementText;
         [Header("Unity Events")]
         public UnityEvent OnMeasureToolActivated;
         public UnityEvent OnMeasureToolStarting;
@@ -23,32 +24,24 @@ namespace FuzzPhyte.Tools
         protected Vector2 startPosition;
         protected Vector2 endPosition;
 
+        [SerializeField]protected FP_MeasureLine currentActiveLine;
+
         [Tooltip("This is a list of all the measurement points we have created.")]
-        [SerializeField]protected List<GameObject> measurementPoints = new List<GameObject>();
-        
-        private void Awake()
+        [SerializeField]protected List<FP_MeasureLine> allMeasuredLines = new List<FP_MeasureLine>();
+
+        /// <summary>
+        /// Public accessor from UI to start the "tool"
+        /// </summary>
+        public void ButtonUI()
         {
-            if(measurementText == null)
-            {
-                Debug.LogError($"{gameObject.name} does not have a measurement text assigned. Please assign a Text component.");
-                return;
-            }
-            measurementText.gameObject.SetActive(false);
-            if(lineRenderer == null)
-            {
-                Debug.LogError($"{gameObject.name} does not have a line renderer assigned. Please assign a LineRenderer component.");
-                return;
-            }
+            Initialize(toolData);
+            ActivateTool();
         }
         public override void Initialize(FP_MeasureToolData data)
         {
             base.Initialize(data);
-            lineRenderer.positionCount = 2;
-            lineRenderer.material = toolData.LineMat;
-            lineRenderer.startColor = lineRenderer.endColor = toolData.lineColor;
-            lineRenderer.startWidth = lineRenderer.endWidth = toolData.lineWidth;
-            UpdateTextFormat(0f);;
         }
+       
         /// <summary>
         /// This just sets our state up for being ready to use the tool
         /// </summary>
@@ -69,21 +62,29 @@ namespace FuzzPhyte.Tools
             {
                 return;
             }
-            if(StartTool())
+            if (RectTransformUtility.RectangleContainsScreenPoint(measurementParentSpace, eventData.position))
             {
-                lineRenderer.gameObject.SetActive(true);
-                measurementText.gameObject.SetActive(true);
-                Vector2 screenPosition = eventData.position;
-                startPosition = ScreenToCanvasPosition(screenPosition);
-                lineRenderer.SetPosition(0, startPosition);
-                lineRenderer.SetPosition(1, startPosition);
-                //use our point prefab to drop this into the scene at hte start position
-                GameObject point = Instantiate(toolData.MeasurementPointPrefab);
-                point.transform.position = startPosition;
-                point.transform.SetParent(measurementParentSpace, false);
-                measurementPoints.Add(point);
-                OnMeasureToolStarting?.Invoke();
-            }
+                if (StartTool())
+                {
+                    Vector2 screenPosition = eventData.position;
+                    startPosition = ScreenToCanvasPosition(screenPosition);
+                    OnMeasureToolStarting?.Invoke();
+                    var spawnedItem = Instantiate(toolData.MeasurementPointPrefab, measurementParentSpace);
+                    if (spawnedItem.GetComponent<FP_MeasureLine>() != null)
+                    {
+                        currentActiveLine = spawnedItem.GetComponent<FP_MeasureLine>();
+                        currentActiveLine.SetupLine(this);
+                        currentActiveLine.DropFirstPoint(startPosition);
+                        allMeasuredLines.Add(currentActiveLine);
+                    }
+                    else
+                    {
+                        Destroy(spawnedItem);
+                        Debug.LogError($"missing FP_measure line component");
+                        DeactivateTool();
+                    }
+                }
+            } 
         }
 
         public void OnDrag(PointerEventData eventData)
@@ -96,7 +97,10 @@ namespace FuzzPhyte.Tools
             {
                 Vector2 screenPosition = eventData.position;
                 endPosition = ScreenToCanvasPosition(screenPosition);
-                lineRenderer.SetPosition(1, endPosition);
+                if (currentActiveLine != null) 
+                {
+                    currentActiveLine.DropSecondPoint(endPosition);
+                }
                 UpdateMeasurementText();
             } 
         }
@@ -106,23 +110,39 @@ namespace FuzzPhyte.Tools
             {
                 return;
             }
-            if(EndTool())
+            //are we in the position?
+            if (RectTransformUtility.RectangleContainsScreenPoint(measurementParentSpace, eventData.position))
             {
-                Vector2 screenPosition = eventData.position;
-                endPosition = ScreenToCanvasPosition(screenPosition);
-                lineRenderer.SetPosition(1, endPosition);
-                UpdateMeasurementText();
-                OnMeasureToolEnding?.Invoke();
-                DeactivateTool();
+                if (EndTool())
+                {
+                    Vector2 screenPosition = eventData.position;
+                    endPosition = ScreenToCanvasPosition(screenPosition);
+                    if (currentActiveLine != null)
+                    {
+                        currentActiveLine.DropSecondPoint(endPosition);
+                    }
+                    UpdateMeasurementText();
+                    OnMeasureToolEnding?.Invoke();
+                    DeactivateTool();
+                }
             }
+            else
+            {
+                //destroy it
+                DeactivateTool();
+                if (currentActiveLine != null) 
+                {
+                    allMeasuredLines.Remove(currentActiveLine);
+                    Destroy(currentActiveLine.gameObject);
+                }
+            }
+                
         }
         public override bool DeactivateTool()
         {
             if(base.DeactivateTool())
             {
                 ToolIsCurrent = false;
-                //lineRenderer.gameObject.SetActive(false);
-                //measurementText.gameObject.SetActive(false);
                 OnMeasureToolDeactivated?.Invoke();
                 return true;
             }
@@ -139,12 +159,18 @@ namespace FuzzPhyte.Tools
         {
             float distance = Vector2.Distance(startPosition, endPosition);
             //format text
-            UpdateTextFormat(distance);
-            measurementText.rectTransform.anchoredPosition = (startPosition + endPosition) / 2;
+            if (currentActiveLine != null) 
+            {
+                UpdateTextFormat(distance);
+            }     
         }
         protected void UpdateTextFormat(float distance)
         {
-            measurementText.text = $"{toolData.measurementPrefix}: {distance}:{toolData.measurementPrecision} {toolData.measurementUnits}";
+            if (currentActiveLine != null)
+            {
+                currentActiveLine.UpdateTextInformation($"{toolData.measurementPrefix}: {distance}:{toolData.measurementPrecision} {toolData.measurementUnits}");
+                currentActiveLine.UpdateTextLocation((startPosition + endPosition) / 2);
+            }
         }
 
         

@@ -1,5 +1,6 @@
 namespace FuzzPhyte.Tools
 {
+    using FuzzPhyte.Tools.Samples;
     using FuzzPhyte.Utility;
     using UnityEngine;
 
@@ -13,6 +14,7 @@ namespace FuzzPhyte.Tools
         public string measurementUnits="m";
         public string measurementPrefix = "Dis:";
         public float measurementPrecision = 2f; // Decimal places
+        public FontSetting MeasurementFontSetting;
         public GameObject MeasurementPointPrefab;
     }
 }
