@@ -1,0 +1,18 @@
+{
+    "name": "com.fuzzphyte.tools.editor",
+    "rootNamespace": "FuzzPhyte.Tools.Editor",
+    "references": [
+        "com.fuzzphyte.tools"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
