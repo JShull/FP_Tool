@@ -1,0 +1,20 @@
+{
+    "name": "com.fuzzphyte.tools.samples",
+    "rootNamespace": "FuzzPhyte.Tools.Samples",
+    "references": [
+        "com.fuzzphyte.utility",
+        "com.fuzzphyte.tools",
+        "Unity.TextMeshPro",
+        "Unity.Mathematics",
+        "com.fuzzphyte.ray"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

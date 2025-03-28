@@ -3,70 +3,103 @@ namespace FuzzPhyte.Tools
     using UnityEngine;
     using FuzzPhyte.Utility;
     using System;
+    using System.Collections.Generic;
     public abstract class FP_Tool<T> : MonoBehaviour 
         where T : FP_Data
     {
         [SerializeField]
         protected T toolData;
-
         public FPToolState CurrentState { get; protected set; } = FPToolState.Deactivated;
-        public event Action OnActivated;
-        public event Action OnStarting;
-        public event Action OnActiveUse;
-        public event Action OnEnding;
-        public event Action OnDeactivated;
+        public event Action<FP_Tool<T>> OnActivated;
+        public event Action<FP_Tool<T>> OnStarting;
+        public event Action<FP_Tool<T>> OnActiveUse;
+        public event Action<FP_Tool<T>> OnEnding;
+        public event Action<FP_Tool<T>> OnDeactivated;
+
+        [Tooltip("This is an interrupt flag to let us ignore")]
+        public bool ToolIsCurrent;
+
+        public T ToolData => toolData;
+        // Dictionary defining allowed transitions
+        protected Dictionary<FPToolState, HashSet<FPToolState>> allowedTransitions = new Dictionary<FPToolState, HashSet<FPToolState>>
+        {
+            { FPToolState.Deactivated, new HashSet<FPToolState> { FPToolState.Activated } },
+            { FPToolState.Activated,   new HashSet<FPToolState> { FPToolState.Starting, FPToolState.Deactivated } },
+            { FPToolState.Starting,    new HashSet<FPToolState> { FPToolState.ActiveUse, FPToolState.Deactivated } },
+            { FPToolState.ActiveUse,   new HashSet<FPToolState> { FPToolState.ActiveUse,FPToolState.Ending, FPToolState.Deactivated } },
+            { FPToolState.Ending,      new HashSet<FPToolState> { FPToolState.Starting, FPToolState.Deactivated } },
+        };
 
         public virtual void Initialize(T data)
         {
             toolData = data;
         }
 
-        public virtual void ActivateTool()
+        public virtual bool ActivateTool()
         {
-            SetState(FPToolState.Activated);
+            return SetState(FPToolState.Activated);
         }
 
-        public virtual void StartTool()
+        public virtual bool StartTool()
         {
-            SetState(FPToolState.Starting);
+           return SetState(FPToolState.Starting);
         }
 
-        public virtual void UseTool()
+        public virtual bool UseTool()
         {
-            SetState(FPToolState.ActiveUse);
+            return SetState(FPToolState.ActiveUse);
         }
 
-        public virtual void EndTool()
+        public virtual bool EndTool()
         {
-            SetState(FPToolState.Ending);
+            return SetState(FPToolState.Ending);
         }
 
-        public virtual void DeactivateTool()
+        public virtual bool DeactivateTool()
         {
-            SetState(FPToolState.Deactivated);
+            return SetState(FPToolState.Deactivated);
         }
 
-        protected virtual void SetState(FPToolState newState)
+        protected virtual bool SetState(FPToolState newState)
         {
+            if (!CanTransitionTo(newState))
+            {
+                Debug.LogWarning($"Invalid state transition from {CurrentState} to {newState}");
+                return false;
+            }
             CurrentState = newState;
             switch (CurrentState)
             {
                 case FPToolState.Activated:
-                    OnActivated?.Invoke();
-                    break;
+                    OnActivated?.Invoke(this);
+                    return true;
                 case FPToolState.Starting:
-                    OnStarting?.Invoke();
-                    break;
+                    OnStarting?.Invoke(this);
+                    return true;
                 case FPToolState.ActiveUse:
-                    OnActiveUse?.Invoke();
-                    break;
+                    OnActiveUse?.Invoke(this);
+                    return true;
                 case FPToolState.Ending:
-                    OnEnding?.Invoke();
-                    break;
+                    OnEnding?.Invoke(this);
+                    return true;
                 case FPToolState.Deactivated:
-                    OnDeactivated?.Invoke();
-                    break;
+                    OnDeactivated?.Invoke(this);
+                    return true;
             }
+            return false;
+        }
+        /// <summary>
+        /// Will confirm if the transition is valid based on the current state and the target state.
+        /// </summary>
+        /// <param name="targetState">Next potential target state?</param>
+        /// <returns></returns>
+        protected virtual bool CanTransitionTo(FPToolState targetState)
+        {
+            if (allowedTransitions.TryGetValue(CurrentState, out var allowedNextStates))
+            {
+                return allowedNextStates.Contains(targetState);
+            }
+            return false;
         }
     }
 }

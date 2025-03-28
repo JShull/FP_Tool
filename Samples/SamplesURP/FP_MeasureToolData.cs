@@ -9,6 +9,10 @@ namespace FuzzPhyte.Tools
         public Color lineColor = Color.green;
         public Material LineMat;
         public float lineWidth = 0.02f;
+        public string startingMeasurementText ="";
+        public string measurementUnits="m";
+        public string measurementPrefix = "Dis:";
         public float measurementPrecision = 2f; // Decimal places
+        public GameObject MeasurementPointPrefab;
     }
 }
