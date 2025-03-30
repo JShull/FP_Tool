@@ -9,7 +9,8 @@ namespace FuzzPhyte.Tools
     {
         [SerializeField]
         protected T toolData;
-        public FPToolState CurrentState { get; protected set; } = FPToolState.Deactivated;
+        public Camera ToolCamera;
+        public FPToolState CurrentState;
         public event Action<FP_Tool<T>> OnActivated;
         public event Action<FP_Tool<T>> OnStarting;
         public event Action<FP_Tool<T>> OnActiveUse;
@@ -37,16 +38,19 @@ namespace FuzzPhyte.Tools
 
         public virtual bool ActivateTool()
         {
+            Debug.Log($"Activating tool {this}");
             return SetState(FPToolState.Activated);
         }
 
         public virtual bool StartTool()
         {
-           return SetState(FPToolState.Starting);
+            Debug.Log($"Starting tool {this}");
+            return SetState(FPToolState.Starting);
         }
 
         public virtual bool UseTool()
         {
+            Debug.Log($"Using tool {this}");
             return SetState(FPToolState.ActiveUse);
         }
 

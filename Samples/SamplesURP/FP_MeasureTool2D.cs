@@ -1,28 +1,28 @@
-namespace FuzzPhyte.Tools
+namespace FuzzPhyte.Tools.Samples
 {
-    using FuzzPhyte.Tools.Samples;
-    //JOHN NEED TO TRANSITION FROM THIS LINE RENDERER TO THE FP_MEASURELINE
+
     using System.Collections.Generic;
     using UnityEngine;
     using UnityEngine.Events;
     using UnityEngine.EventSystems;
-    using UnityEngine.UI;
+    /// <summary>
+    /// This class is using the Unity UI Interfaces like IDrag/IPoint/etc. which means we need a canvas/RectTransform to work with
+    /// </summary>
+    [RequireComponent(typeof(RectTransform))]
     public class FPMeasureTool2D : FP_Tool<FP_MeasureToolData>, IDragHandler, IPointerDownHandler, IPointerUpHandler
     {
-        
-        [SerializeField] protected RectTransform canvasRect;
+        [SerializeField] protected Canvas canvasRect;
         [Tooltip("Where do we want our measurements to be saved under")]
         [SerializeField] protected RectTransform measurementParentSpace;
-        //[SerializeField] protected LineRenderer lineRenderer;
-        //[SerializeField] protected Text measurementText;
         [Header("Unity Events")]
         public UnityEvent OnMeasureToolActivated;
         public UnityEvent OnMeasureToolStarting;
         public UnityEvent OnMeasureToolEnding;
         public UnityEvent OnMeasureToolDeactivated;
         [Header("Internal parameters")]
-        protected Vector2 startPosition;
-        protected Vector2 endPosition;
+        protected Vector2 startPosition = Vector2.zero;
+        protected Vector2 endPosition = Vector2.zero;
+        protected int lineSortOrderCounter =10;
 
         [SerializeField]protected FP_MeasureLine currentActiveLine;
 
@@ -53,27 +53,36 @@ namespace FuzzPhyte.Tools
                 OnMeasureToolActivated?.Invoke();
                 return true;
             }
+            Debug.LogWarning($"Didn't activate the tool?");
             return false;
         }
 
         public void OnPointerDown(PointerEventData eventData)
         {
+            Debug.LogWarning($"Pointer down!");
             if(!ToolIsCurrent)
             {
                 return;
             }
-            if (RectTransformUtility.RectangleContainsScreenPoint(measurementParentSpace, eventData.position))
+            //Debug.LogWarning($"Passed Tool is Current");
+            //need to convert the eventData.Position to the RectTransform space of the canvas
+            
+            //RectTransformUtility.ScreenPointToLocalPointInRectangle(measurementParentSpace,eventData.position,ToolCamera, out Vector2 localPoint);
+            //Debug.LogWarning($"Event Data position: {eventData.position}, converted point {localPoint}");
+            //bool inRectangle = RectTransformUtility.RectangleContainsScreenPoint(measurementParentSpace, eventData.position, ToolCamera);
+            if (RectTransformUtility.RectangleContainsScreenPoint(measurementParentSpace, eventData.position,ToolCamera))
             {
                 if (StartTool())
                 {
                     Vector2 screenPosition = eventData.position;
-                    startPosition = ScreenToCanvasPosition(screenPosition);
+                    startPosition = ScreenToRelativeRectPosition(screenPosition, measurementParentSpace);
+                    
                     OnMeasureToolStarting?.Invoke();
                     var spawnedItem = Instantiate(toolData.MeasurementPointPrefab, measurementParentSpace);
                     if (spawnedItem.GetComponent<FP_MeasureLine>() != null)
                     {
                         currentActiveLine = spawnedItem.GetComponent<FP_MeasureLine>();
-                        currentActiveLine.SetupLine(this);
+                        currentActiveLine.SetupLine(this,measurementParentSpace,canvasRect,ToolCamera,lineSortOrderCounter);
                         currentActiveLine.DropFirstPoint(startPosition);
                         allMeasuredLines.Add(currentActiveLine);
                     }
@@ -95,8 +104,7 @@ namespace FuzzPhyte.Tools
             }
             if(UseTool())
             {
-                Vector2 screenPosition = eventData.position;
-                endPosition = ScreenToCanvasPosition(screenPosition);
+                endPosition = ScreenToRelativeRectPosition(eventData.position, measurementParentSpace);
                 if (currentActiveLine != null) 
                 {
                     currentActiveLine.DropSecondPoint(endPosition);
@@ -106,17 +114,18 @@ namespace FuzzPhyte.Tools
         }
         public void OnPointerUp(PointerEventData eventData)
         {
+            Debug.Log($"On Pointer up");
             if(!ToolIsCurrent)
             {
                 return;
             }
             //are we in the position?
-            if (RectTransformUtility.RectangleContainsScreenPoint(measurementParentSpace, eventData.position))
+            if (RectTransformUtility.RectangleContainsScreenPoint(measurementParentSpace, eventData.position,ToolCamera))
             {
                 if (EndTool())
                 {
-                    Vector2 screenPosition = eventData.position;
-                    endPosition = ScreenToCanvasPosition(screenPosition);
+                    
+                    endPosition = ScreenToRelativeRectPosition(eventData.position,measurementParentSpace);
                     if (currentActiveLine != null)
                     {
                         currentActiveLine.DropSecondPoint(endPosition);
@@ -124,6 +133,7 @@ namespace FuzzPhyte.Tools
                     UpdateMeasurementText();
                     OnMeasureToolEnding?.Invoke();
                     DeactivateTool();
+                    lineSortOrderCounter++;
                 }
             }
             else
@@ -136,7 +146,6 @@ namespace FuzzPhyte.Tools
                     Destroy(currentActiveLine.gameObject);
                 }
             }
-                
         }
         public override bool DeactivateTool()
         {
@@ -148,10 +157,25 @@ namespace FuzzPhyte.Tools
             }
             return false;
         }
-
+        /// <summary>
+        /// Returns a screen position coordinate based on the canvas already assigned in the inspector
+        /// </summary>
+        /// <param name="screenPosition"></param>
+        /// <returns></returns>
         protected Vector2 ScreenToCanvasPosition(Vector2 screenPosition)
         {
-            RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, screenPosition, null, out Vector2 canvasPos);
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect.GetComponent<RectTransform>(), screenPosition, ToolCamera, out Vector2 canvasPos);
+            return canvasPos;
+        }
+        /// <summary>
+        /// Returns a Screen Position Coordinate based on the rect transform passed in
+        /// </summary>
+        /// <param name="screenPosition"></param>
+        /// <param name="rect"></param>
+        /// <returns></returns>
+        protected Vector2 ScreenToRelativeRectPosition(Vector2 screenPosition, RectTransform rect)
+        {
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(rect, screenPosition, ToolCamera, out Vector2 canvasPos);
             return canvasPos;
         }
 

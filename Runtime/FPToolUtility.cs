@@ -1,15 +1,17 @@
+using System;
 using FuzzPhyte.Utility;
 using Unity.VisualScripting.YamlDotNet.Core.Tokens;
 
 namespace FuzzPhyte.Tools
 {
+    [Serializable]
     public enum FPToolState
     {
-        Deactivated,
-        Activated,
-        Starting,
-        ActiveUse,
-        Ending
+        Deactivated = 0,
+        Activated = 1,
+        Starting = 2,
+        ActiveUse = 3,
+        Ending = 9
     }
 
     public interface IFPToolListener<T> where T : FP_Data

@@ -2,8 +2,8 @@ namespace FuzzPhyte.Tools.Samples
 {
     using UnityEngine;
     using FuzzPhyte.Tools;
-    using FuzzPhyte.Utility;
     using TMPro;
+    using System.Collections.Generic;
 
     /// <summary>
     /// Used to store information on deployed 'measure line'
@@ -16,12 +16,32 @@ namespace FuzzPhyte.Tools.Samples
         public RectTransform SecondPoint;
         public TextMeshProUGUI MeasurementText;
         public LineRenderer LineRenderer;
-        public void SetupLine(FP_Tool<FP_MeasureToolData> theTool)
+        protected RectTransform workSpace;
+        protected Camera myCamera;
+        protected Canvas canvas;
+        /// <summary>
+        /// Setup the prefab, we need the data and the work space our 2D tool will be in
+        /// </summary>
+        /// <param name="theTool">The data</param>
+        /// <param name="rectPanel">Work space for the 2D tool</param>
+        public void SetupLine(FP_Tool<FP_MeasureToolData> theTool, RectTransform rectPanel, Canvas mainCanvas,Camera mainCamera,int lineRenderOrder=10)
         {
+            workSpace = rectPanel;
+            myCamera = mainCamera;
+            canvas = mainCanvas;
             myTool = theTool;
             LineRenderer.positionCount = 2;
-            LineRenderer.material = theTool.ToolData.LineMat;
+            //testing local space
+            LineRenderer.useWorldSpace = false;
+            LineRenderer.sortingOrder = lineRenderOrder;
+            Material cachedMat = theTool.ToolData.LineMat;
+            cachedMat.color = theTool.ToolData.lineColor;
+            
+            List<Material> materials = new List<Material>();
+            materials.Add(cachedMat);
+            LineRenderer.SetMaterials(materials);
             LineRenderer.startColor = theTool.ToolData.lineColor;
+            LineRenderer.endColor = theTool.ToolData.lineColor;
             LineRenderer.startWidth = theTool.ToolData.lineWidth;
             
             //now listen in
@@ -32,18 +52,33 @@ namespace FuzzPhyte.Tools.Samples
             myTool.OnDeactivated += OnToolDeactivated;
         }
 
-        public virtual void DropFirstPoint(Vector2 position)
+        public virtual void DropFirstPoint(Vector2 screenPosition)
         {
-            FirstPoint.localPosition = position;
+            //convert the pixel space to world space
+            /*
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(
+            parentCanvas.transform as RectTransform,
+            Input.mousePosition, parentCanvas.worldCamera,
+            out movePos);
+        Vector3 positionToReturn = parentCanvas.transform.TransformPoint(movePos);
+        positionToReturn.z = parentCanvas.transform.position.z - 0.01f;
+            */
+            //Vector2 aPosition = RectTransformUtility.ScreenPointToLocalPointInRectangle(workSpace, screenPosition, myCamera, out Vector2 somePos) ? somePos : Vector2.zero;
+            FirstPoint.localPosition = screenPosition;
             FirstPoint.gameObject.SetActive(true);
             SecondPoint.gameObject.SetActive(true);
-            LineRenderer.SetPosition(0, position);
-            LineRenderer.SetPosition(1, position);
+            var depthAdj = new Vector3(screenPosition.x, screenPosition.y,-1f);
+            //Vector3 worldPos = workSpace.transform.TransformPoint(aPosition);
+            LineRenderer.SetPosition(0, depthAdj);
+            LineRenderer.SetPosition(1, depthAdj);
         }
-        public virtual void DropSecondPoint(Vector2 position)
+        public virtual void DropSecondPoint(Vector2 screenPosition)
         {
-            SecondPoint.localPosition = position;
-            LineRenderer.SetPosition(1, position);
+            SecondPoint.localPosition = screenPosition;
+            var depthAdj = new Vector3(screenPosition.x, screenPosition.y,-1f);
+            //Vector2 aPosition = RectTransformUtility.ScreenPointToLocalPointInRectangle(workSpace, screenPosition, myCamera, out Vector2 somePos) ? somePos : Vector2.zero;
+            //Vector3 worldPos = workSpace.transform.TransformPoint(aPosition);
+            LineRenderer.SetPosition(1, depthAdj);
         }
         public void OnDestroy()
         {
