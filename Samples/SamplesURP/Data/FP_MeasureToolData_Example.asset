@@ -16,10 +16,11 @@ MonoBehaviour:
   lineColor: {r: 1, g: 0, b: 0.33545876, a: 1}
   LineMat: {fileID: 2100000, guid: 416d8e39741c54d7aa2ee458b7ce72cf, type: 2}
   lineWidth: 0.1
-  startingMeasurementText: 
-  measurementUnits: m
+  measurementUnits: 11
   measurementPrefix: 'Dis:'
+  measurementLabelOffsetPixels: {x: 0, y: -75}
   measurementPrecision: 2
-  MeasurementFontSetting: {fileID: 0}
+  MeasurementFontSetting: {fileID: 11400000, guid: 2cc2e3b5d55cd4d54b7c35064592e4d7,
+    type: 2}
   MeasurementPointPrefab: {fileID: 5905036035503538133, guid: f4c0fb9570f9c20488f0b2992004d307,
     type: 3}

@@ -10,7 +10,9 @@ FP_Tool: more to come.
 
 SamplesURP will require additional package imports.
 
-* com.unity.render-pipelines.universal
+* [FP_Game](https://github.com/jshull/FP_Game.git)
+* [FP_UI](https://github.com/jshull/FP_UI.git)
+* [FP_Utility_Analytics](https://github.com/jshull/FP_Utility_Analytics.git)
 
 ### Software Architecture
 

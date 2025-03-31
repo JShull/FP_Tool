@@ -24,11 +24,11 @@ namespace FuzzPhyte.Tools
         // Dictionary defining allowed transitions
         protected Dictionary<FPToolState, HashSet<FPToolState>> allowedTransitions = new Dictionary<FPToolState, HashSet<FPToolState>>
         {
-            { FPToolState.Deactivated, new HashSet<FPToolState> { FPToolState.Activated } },
-            { FPToolState.Activated,   new HashSet<FPToolState> { FPToolState.Starting, FPToolState.Deactivated } },
-            { FPToolState.Starting,    new HashSet<FPToolState> { FPToolState.ActiveUse, FPToolState.Deactivated } },
-            { FPToolState.ActiveUse,   new HashSet<FPToolState> { FPToolState.ActiveUse,FPToolState.Ending, FPToolState.Deactivated } },
-            { FPToolState.Ending,      new HashSet<FPToolState> { FPToolState.Starting, FPToolState.Deactivated } },
+            { FPToolState.Deactivated, new HashSet<FPToolState> { FPToolState.Activated,    FPToolState.Deactivated } },
+            { FPToolState.Activated,   new HashSet<FPToolState> { FPToolState.Starting,     FPToolState.Deactivated } },
+            { FPToolState.Starting,    new HashSet<FPToolState> { FPToolState.ActiveUse,    FPToolState.Deactivated } },
+            { FPToolState.ActiveUse,   new HashSet<FPToolState> { FPToolState.ActiveUse,    FPToolState.Ending,         FPToolState.Deactivated } },
+            { FPToolState.Ending,      new HashSet<FPToolState> { FPToolState.Activated,    FPToolState.Deactivated } },
         };
 
         public virtual void Initialize(T data)

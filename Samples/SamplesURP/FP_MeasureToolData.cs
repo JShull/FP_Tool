@@ -10,9 +10,10 @@ namespace FuzzPhyte.Tools
         public Color lineColor = Color.green;
         public Material LineMat;
         public float lineWidth = 0.02f;
-        public string startingMeasurementText ="";
-        public string measurementUnits="m";
+        public UnitOfMeasure measurementUnits=UnitOfMeasure.Meter;
         public string measurementPrefix = "Dis:";
+        [Tooltip("Pixel amount of offset from whatever placed value you are working with")]
+        public Vector2 measurementLabelOffsetPixels = Vector2.zero;
         public float measurementPrecision = 2f; // Decimal places
         public FontSetting MeasurementFontSetting;
         public GameObject MeasurementPointPrefab;

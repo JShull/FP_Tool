@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8897440cd0a2f1945bd5093ae41c4186, type: 3}
+  m_Name: FP_Stat_Type_CLOCKGame
+  m_EditorClassIdentifier: 
+  UniqueID: ToolMeasure_RunningTime_game
+  StatIndex: ToolMeasure_RunningTime_game
+  ImmutableStatType: 1
+  StatDisplayName: Time
+  StatDescription: The time from start/end assuming you've set it up correctly!
+  StatDetails:
+  - {fileID: 11400000, guid: 5d40667f776ff460eb7a1c9c879532dd, type: 2}
+  StatTheme: {fileID: 11400000, guid: c9ea97991871a41d084c9b2a50059d7c, type: 2}

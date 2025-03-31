@@ -4,6 +4,7 @@ namespace FuzzPhyte.Tools.Samples
     using FuzzPhyte.Tools;
     using TMPro;
     using System.Collections.Generic;
+    using FuzzPhyte.Utility;
 
     /// <summary>
     /// Used to store information on deployed 'measure line'
@@ -24,7 +25,7 @@ namespace FuzzPhyte.Tools.Samples
         /// </summary>
         /// <param name="theTool">The data</param>
         /// <param name="rectPanel">Work space for the 2D tool</param>
-        public void SetupLine(FP_Tool<FP_MeasureToolData> theTool, RectTransform rectPanel, Canvas mainCanvas,Camera mainCamera,int lineRenderOrder=10)
+        public void SetupLine(FP_Tool<FP_MeasureToolData> theTool, RectTransform rectPanel, Canvas mainCanvas,Camera mainCamera,FontSetting fontDetails,int lineRenderOrder=10)
         {
             workSpace = rectPanel;
             myCamera = mainCamera;
@@ -43,7 +44,7 @@ namespace FuzzPhyte.Tools.Samples
             LineRenderer.startColor = theTool.ToolData.lineColor;
             LineRenderer.endColor = theTool.ToolData.lineColor;
             LineRenderer.startWidth = theTool.ToolData.lineWidth;
-            
+            FP_UtilityData.ApplyFontSetting(MeasurementText,fontDetails);
             //now listen in
             myTool.OnActivated += OnToolActivated;
             myTool.OnStarting += OnToolStarting;
@@ -118,6 +119,14 @@ namespace FuzzPhyte.Tools.Samples
         public void UpdateTextLocation(Vector2 coordinate)
         {
             MeasurementText.rectTransform.anchoredPosition = coordinate;
+        }
+        public void SetTextRotation(float angle)
+        {
+            if (angle > 90f || angle < -90f)
+            {
+                angle += 180f;
+            }
+            MeasurementText.rectTransform.localRotation = Quaternion.Euler(0f, 0f, angle);
         }
     }
 }

@@ -5,13 +5,21 @@ namespace FuzzPhyte.Tools.Samples
     using UnityEngine;
     using UnityEngine.Events;
     using UnityEngine.EventSystems;
+    using FuzzPhyte.Utility;
+    using UnityEngine.UI;
+
     /// <summary>
     /// This class is using the Unity UI Interfaces like IDrag/IPoint/etc. which means we need a canvas/RectTransform to work with
     /// </summary>
     [RequireComponent(typeof(RectTransform))]
     public class FPMeasureTool2D : FP_Tool<FP_MeasureToolData>, IDragHandler, IPointerDownHandler, IPointerUpHandler
     {
+        [Space]
+        [Header("Keep Using the Line Tool?")]
+        public bool ConstantLineMeasurement = false;
+        [Space]
         [SerializeField] protected Canvas canvasRect;
+        protected CanvasScaler canvasScaler;
         [Tooltip("Where do we want our measurements to be saved under")]
         [SerializeField] protected RectTransform measurementParentSpace;
         [Header("Unity Events")]
@@ -37,9 +45,30 @@ namespace FuzzPhyte.Tools.Samples
             Initialize(toolData);
             ActivateTool();
         }
+        /// <summary>
+        /// Public accessor from UI to 'stop' the tool
+        /// Called at the end of the 'game' example 
+        /// </summary>
+        public void DeactivateResetLinesUI()
+        {
+            DeactivateTool();
+            //blast all the lines
+            foreach (var line in allMeasuredLines)
+            {
+                Destroy(line.gameObject);
+            }
+        }
+        public void DeactivateToolFromUI()
+        {
+            DeactivateTool();
+        }
         public override void Initialize(FP_MeasureToolData data)
         {
             base.Initialize(data);
+            if(canvasRect!=null)
+            {
+                canvasScaler = canvasRect.GetComponent<CanvasScaler>();
+            }
         }
        
         /// <summary>
@@ -82,8 +111,9 @@ namespace FuzzPhyte.Tools.Samples
                     if (spawnedItem.GetComponent<FP_MeasureLine>() != null)
                     {
                         currentActiveLine = spawnedItem.GetComponent<FP_MeasureLine>();
-                        currentActiveLine.SetupLine(this,measurementParentSpace,canvasRect,ToolCamera,lineSortOrderCounter);
+                        currentActiveLine.SetupLine(this,measurementParentSpace,canvasRect,ToolCamera,toolData.MeasurementFontSetting,lineSortOrderCounter);
                         currentActiveLine.DropFirstPoint(startPosition);
+                        currentActiveLine.DropSecondPoint(startPosition);
                         allMeasuredLines.Add(currentActiveLine);
                     }
                     else
@@ -134,6 +164,12 @@ namespace FuzzPhyte.Tools.Samples
                     OnMeasureToolEnding?.Invoke();
                     DeactivateTool();
                     lineSortOrderCounter++;
+                    if(ConstantLineMeasurement)
+                    {
+                        //reset the line to start a new one without having to push the button
+                        Initialize(toolData);
+                        ActivateTool();
+                    }
                 }
             }
             else
@@ -144,6 +180,12 @@ namespace FuzzPhyte.Tools.Samples
                 {
                     allMeasuredLines.Remove(currentActiveLine);
                     Destroy(currentActiveLine.gameObject);
+                }
+                if(ConstantLineMeasurement)
+                {
+                    //reset the line to start a new one without having to push the button
+                    Initialize(toolData);
+                    ActivateTool();
                 }
             }
         }
@@ -188,15 +230,38 @@ namespace FuzzPhyte.Tools.Samples
                 UpdateTextFormat(distance);
             }     
         }
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="distance">incoming pixel coordinate value</param>
         protected void UpdateTextFormat(float distance)
         {
             if (currentActiveLine != null)
             {
-                currentActiveLine.UpdateTextInformation($"{toolData.measurementPrefix}: {distance}:{toolData.measurementPrecision} {toolData.measurementUnits}");
-                currentActiveLine.UpdateTextLocation((startPosition + endPosition) / 2);
+                //convert to the correct measurement system
+                var unitReturn = FP_UtilityData.ReturnUnitByPixels(canvasScaler.referencePixelsPerUnit,distance,toolData.measurementUnits);
+                if(unitReturn.Item1)
+                {
+                    var formattedDistance = unitReturn.Item2.ToString($"F{toolData.measurementPrecision}");
+                    currentActiveLine.UpdateTextInformation($"{toolData.measurementPrefix} {formattedDistance} {toolData.measurementUnits}");
+                }else
+                {
+                    Debug.LogWarning($"Failed to convert the distance {distance} to the correct measurement system {toolData.measurementUnits}");
+                    currentActiveLine.UpdateTextInformation($"{toolData.measurementPrefix} {distance} pixels");
+                    
+                }
+
+                Vector2 midPoint = (startPosition + endPosition) * 0.5f;
+                Vector2 direction = (endPosition - startPosition).normalized;
+                // Perpendicular vector (rotate 90 degrees CCW)
+                Vector2 perpendicular = new Vector2(-direction.y, direction.x);
+                // Apply offset relative to perpendicular direction
+                Vector2 offset = perpendicular * toolData.measurementLabelOffsetPixels.y + direction * toolData.measurementLabelOffsetPixels.x;
+                Vector2 labelPosition = midPoint + offset;
+                currentActiveLine.UpdateTextLocation(labelPosition);
+                float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
+                currentActiveLine.SetTextRotation(angle);
             }
         }
-
-        
     }
 }
