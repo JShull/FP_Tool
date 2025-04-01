@@ -3,10 +3,10 @@
     "rootNamespace": "FuzzPhyte.Tools.Samples",
     "references": [
         "com.fuzzphyte.utility",
-        "com.fuzzphyte.tools",
-        "Unity.TextMeshPro",
-        "Unity.Mathematics",
         "com.fuzzphyte.ray",
+        "Unity.Mathematics",
+        "Unity.TextMeshPro",
+        "com.fuzzphyte.tools",
         "com.fuzzphyte.utility.analytics",
         "com.fuzzphyte.game.samples"
     ],
