@@ -8,11 +8,11 @@ FP_Tool is designed and built to be a simple set of base classes designed around
 
 FP_Tool: more to come.
 
-SamplesURP will require additional package imports.
+SamplesURP will require additional package imports - make sure you import hte FP_Game repository first, then import the samples included in FP_Game
 
-* [FP_Game](https://github.com/jshull/FP_Game.git)
 * [FP_UI](https://github.com/jshull/FP_UI.git)
 * [FP_Utility_Analytics](https://github.com/jshull/FP_Utility_Analytics.git)
+* [FP_Game_Samples](https://github.com/jshull/FP_Game.git)
 
 ### Software Architecture
 

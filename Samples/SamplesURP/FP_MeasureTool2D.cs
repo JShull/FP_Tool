@@ -79,7 +79,7 @@ namespace FuzzPhyte.Tools.Samples
             if(base.ActivateTool())
             {
                 ToolIsCurrent = true;
-                OnMeasureToolActivated?.Invoke();
+                OnMeasureToolActivated.Invoke();
                 return true;
             }
             Debug.LogWarning($"Didn't activate the tool?");
@@ -106,7 +106,7 @@ namespace FuzzPhyte.Tools.Samples
                     Vector2 screenPosition = eventData.position;
                     startPosition = ScreenToRelativeRectPosition(screenPosition, measurementParentSpace);
                     
-                    OnMeasureToolStarting?.Invoke();
+                    OnMeasureToolStarting.Invoke();
                     var spawnedItem = Instantiate(toolData.MeasurementPointPrefab, measurementParentSpace);
                     if (spawnedItem.GetComponent<FP_MeasureLine>() != null)
                     {
@@ -114,6 +114,8 @@ namespace FuzzPhyte.Tools.Samples
                         currentActiveLine.SetupLine(this,measurementParentSpace,canvasRect,ToolCamera,toolData.MeasurementFontSetting,lineSortOrderCounter);
                         currentActiveLine.DropFirstPoint(startPosition);
                         currentActiveLine.DropSecondPoint(startPosition);
+                        UpdateTextFormat(0);
+                        currentActiveLine.UpdateTextLocation(startPosition);
                         allMeasuredLines.Add(currentActiveLine);
                     }
                     else
@@ -161,7 +163,7 @@ namespace FuzzPhyte.Tools.Samples
                         currentActiveLine.DropSecondPoint(endPosition);
                     }
                     UpdateMeasurementText();
-                    OnMeasureToolEnding?.Invoke();
+                    OnMeasureToolEnding.Invoke();
                     DeactivateTool();
                     lineSortOrderCounter++;
                     if(ConstantLineMeasurement)
@@ -194,7 +196,7 @@ namespace FuzzPhyte.Tools.Samples
             if(base.DeactivateTool())
             {
                 ToolIsCurrent = false;
-                OnMeasureToolDeactivated?.Invoke();
+                OnMeasureToolDeactivated.Invoke();
                 return true;
             }
             return false;
