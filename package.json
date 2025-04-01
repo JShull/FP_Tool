@@ -20,7 +20,7 @@
     },
     "samples": [
       {
-        "displayName": "Utility Samples",
+        "displayName": "Tool Samples",
         "description": "Includes some examples for using the first 'measuring' tool",
         "path": "Samples~/SamplesURP"
       }

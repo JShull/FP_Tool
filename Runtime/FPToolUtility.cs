@@ -1,9 +1,8 @@
-using System;
-using FuzzPhyte.Utility;
-using Unity.VisualScripting.YamlDotNet.Core.Tokens;
-
 namespace FuzzPhyte.Tools
 {
+    using System;
+    using FuzzPhyte.Utility;
+
     [Serializable]
     public enum FPToolState
     {
