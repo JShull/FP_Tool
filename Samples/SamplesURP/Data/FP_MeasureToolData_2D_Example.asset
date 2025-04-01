@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 81deb1e30ca0a4f2788c908f4dda02b0, type: 3}
-  m_Name: FP_MeasureToolData_Example
+  m_Name: FP_MeasureToolData_2D_Example
   m_EditorClassIdentifier: 
   UniqueID: ToolSample_MeasureData
   lineColor: {r: 1, g: 0, b: 0.33545876, a: 1}
@@ -20,7 +20,5 @@ MonoBehaviour:
   measurementPrefix: 'Dis:'
   measurementLabelOffsetPixels: {x: 0, y: -75}
   measurementPrecision: 2
-  MeasurementFontSetting: {fileID: 11400000, guid: 2cc2e3b5d55cd4d54b7c35064592e4d7,
-    type: 2}
-  MeasurementPointPrefab: {fileID: 5905036035503538133, guid: f4c0fb9570f9c20488f0b2992004d307,
-    type: 3}
+  MeasurementFontSetting: {fileID: 11400000, guid: 2cc2e3b5d55cd4d54b7c35064592e4d7, type: 2}
+  MeasurementPointPrefab: {fileID: 5905036035503538133, guid: f4c0fb9570f9c20488f0b2992004d307, type: 3}

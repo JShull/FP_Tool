@@ -1,6 +1,5 @@
 namespace FuzzPhyte.Tools
 {
-    using FuzzPhyte.Tools.Samples;
     using FuzzPhyte.Utility;
     using UnityEngine;
 
@@ -13,7 +12,7 @@ namespace FuzzPhyte.Tools
         public UnitOfMeasure measurementUnits=UnitOfMeasure.Meter;
         public string measurementPrefix = "Dis:";
         [Tooltip("Pixel amount of offset from whatever placed value you are working with")]
-        public Vector2 measurementLabelOffsetPixels = Vector2.zero;
+        public Vector3 measurementLabelOffsetPixels = Vector3.zero;
         public float measurementPrecision = 2f; // Decimal places
         public FontSetting MeasurementFontSetting;
         public GameObject MeasurementPointPrefab;
