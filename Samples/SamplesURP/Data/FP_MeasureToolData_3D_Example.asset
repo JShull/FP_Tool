@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 81deb1e30ca0a4f2788c908f4dda02b0, type: 3}
+  m_Name: FP_MeasureToolData_3D_Example
+  m_EditorClassIdentifier: 
+  UniqueID: ToolSample_MeasureData
+  lineColor: {r: 1, g: 1, b: 1, a: 1}
+  LineMat: {fileID: 2100000, guid: 34432d723ac7da042b274bc8b5d6b4ab, type: 2}
+  lineWidth: 0.1
+  lineDepth: 3
+  measurementUnits: 3
+  measurementPrefix: 'Dis:'
+  measurementLabelOffsetPixels: {x: 0, y: -0.5, z: 0}
+  measurementPrecision: 2
+  MeasurementFontSetting: {fileID: 11400000, guid: 2cc2e3b5d55cd4d54b7c35064592e4d7, type: 2}
+  MeasurementPointPrefab: {fileID: 716873236662534562, guid: add168a3fd376c649a7f2bee7f4d54c5, type: 3}

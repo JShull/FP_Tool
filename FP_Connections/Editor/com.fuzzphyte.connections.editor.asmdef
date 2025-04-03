@@ -1,0 +1,21 @@
+{
+    "name": "com.fuzzphyte.connections.editor",
+    "rootNamespace": "FuzzPhyte.Connections.Editor",
+    "references": [
+        "GUID:b2274f1409ce26f40919f89f9d4f667c",
+        "GUID:8729f3cadef284ac4bc6fd994d431e7a",
+        "GUID:d8b63aba1907145bea998dd612889d6b",
+        "GUID:dda44226a2e734b418efe455fa0d42fb"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

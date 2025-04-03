@@ -1,12 +1,10 @@
 {
-    "name": "com.fuzzphyte.tools",
-    "rootNamespace": "FuzzPhyte.Tools",
+    "name": "com.fuzzphyte.connections",
+    "rootNamespace": "FuzzPhyte.Connections",
     "references": [
-        "com.fuzzphyte.utility",
-        "com.fuzzphyte.ray",
         "Unity.Mathematics",
-        "Unity.TextMeshPro",
-        "Unity.RenderPipelines.Universal.Runtime"
+        "com.fuzzphyte.utility",
+        "com.fuzzphyte.tools"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
