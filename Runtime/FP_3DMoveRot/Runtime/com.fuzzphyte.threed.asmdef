@@ -1,0 +1,17 @@
+{
+    "name": "com.fuzzphyte.threed",
+    "rootNamespace": "FuzzPhyte.ThreeD",
+    "references": [
+        "com.fuzzphyte.ray",
+        "com.fuzzphyte.utility"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
