@@ -11,6 +11,7 @@ namespace FuzzPhyte.Tools
         protected T toolData;
         public Camera ToolCamera;
         public FPToolState CurrentState;
+
         public event Action<FP_Tool<T>> OnActivated;
         public event Action<FP_Tool<T>> OnStarting;
         public event Action<FP_Tool<T>> OnActiveUse;

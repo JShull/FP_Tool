@@ -1,11 +1,9 @@
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-using FuzzPhyte.Ray;
-using System;
-
 namespace FuzzPhyte.ThreeD
 {
+    using System.Collections.Generic;
+    using UnityEngine;
+    using System;
+
     public class FP_PanMove : MonoBehaviour
     {
         public List<Collider> SnapPoints = new List<Collider>();

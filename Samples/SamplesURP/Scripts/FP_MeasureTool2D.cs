@@ -6,16 +6,17 @@ namespace FuzzPhyte.Tools.Samples
     using UnityEngine.EventSystems;
     using FuzzPhyte.Utility;
     using UnityEngine.UI;
+    using System.Xml;
 
     /// <summary>
     /// This class is using the Unity UI Interfaces like IDrag/IPoint/etc. which means we need a canvas/RectTransform to work with
     /// </summary>
     [RequireComponent(typeof(RectTransform))]
-    public class FPMeasureTool2D : FP_Tool<FP_MeasureToolData>, IDragHandler, IPointerDownHandler, IPointerUpHandler
+    public class FPMeasureTool2D : FP_Tool<FP_MeasureToolData>, IFPUIEventListener<FP_Tool<FP_MeasureToolData>>
     {
         [Space]
-        [Header("Keep Using the Line Tool?")]
-        public bool ConstantLineMeasurement = false;
+        //[Header("Keep Using the Line Tool?")]
+        //public bool ConstantLineMeasurement = false;
         [Space]
         [SerializeField] protected Canvas canvasRect;
         protected CanvasScaler canvasScaler;
@@ -36,14 +37,7 @@ namespace FuzzPhyte.Tools.Samples
         [Tooltip("This is a list of all the measurement points we have created.")]
         [SerializeField]protected List<FP_MeasureLine2D> allMeasuredLines = new List<FP_MeasureLine2D>();
 
-        /// <summary>
-        /// Public accessor from UI to start the "tool"
-        /// </summary>
-        public void ButtonUI()
-        {
-            Initialize(toolData);
-            ActivateTool();
-        }
+        
         /// <summary>
         /// Public accessor from UI to 'stop' the tool
         /// Called at the end of the 'game' example 
@@ -61,6 +55,7 @@ namespace FuzzPhyte.Tools.Samples
         {
             DeactivateTool();
         }
+        
         public override void Initialize(FP_MeasureToolData data)
         {
             base.Initialize(data);
@@ -84,8 +79,38 @@ namespace FuzzPhyte.Tools.Samples
             Debug.LogWarning($"Didn't activate the tool?");
             return false;
         }
-
-        public void OnPointerDown(PointerEventData eventData)
+        //JOHN
+        public void OnUIEvent(FP_UIEventData<FP_Tool<FP_MeasureToolData>> eventData)
+        {
+            Debug.LogWarning($"OnUIEvent was processed {eventData.EventType} {eventData.AdditionalData} {this} {ToolIsCurrent}");
+            if (!ToolIsCurrent)
+            {
+                return;
+            }
+            if (eventData.TargetObject == this.gameObject)
+            {
+                //it's me
+                Debug.LogWarning($"Event Data Target Object is me {eventData.TargetObject} {this}");
+                switch (eventData.EventType)
+                {
+                    case FP_UIEventType.PointerDown:
+                        PointerDown(eventData.UnityPointerEventData);
+                        break;
+                    case FP_UIEventType.PointerUp:
+                        PointerUp(eventData.UnityPointerEventData);
+                        break;
+                    case FP_UIEventType.Drag:
+                        PointerDrag(eventData.UnityPointerEventData);
+                        break;
+                }
+            }
+            else
+            {
+                //it's not me
+                Debug.LogWarning($"Event Data Target Object is NOT me {eventData.TargetObject} {this}");
+            }
+        }
+        public void PointerDown(PointerEventData eventData)
         {
             Debug.LogWarning($"Pointer down!");
             if(!ToolIsCurrent)
@@ -128,7 +153,7 @@ namespace FuzzPhyte.Tools.Samples
             } 
         }
 
-        public void OnDrag(PointerEventData eventData)
+        public void PointerDrag(PointerEventData eventData)
         {
             if(!ToolIsCurrent)
             {
@@ -144,7 +169,7 @@ namespace FuzzPhyte.Tools.Samples
                 UpdateMeasurementText();
             } 
         }
-        public void OnPointerUp(PointerEventData eventData)
+        public void PointerUp(PointerEventData eventData)
         {
             Debug.Log($"On Pointer up");
             if(!ToolIsCurrent)
@@ -166,12 +191,14 @@ namespace FuzzPhyte.Tools.Samples
                     OnMeasureToolEnding.Invoke();
                     DeactivateTool();
                     lineSortOrderCounter++;
+                    /*
                     if(ConstantLineMeasurement)
                     {
                         //reset the line to start a new one without having to push the button
                         Initialize(toolData);
                         ActivateTool();
                     }
+                    */
                 }
             }
             else
@@ -183,12 +210,14 @@ namespace FuzzPhyte.Tools.Samples
                     allMeasuredLines.Remove(currentActiveLine);
                     Destroy(currentActiveLine.gameObject);
                 }
+                /*
                 if(ConstantLineMeasurement)
                 {
                     //reset the line to start a new one without having to push the button
                     Initialize(toolData);
                     ActivateTool();
                 }
+                */
             }
         }
         public override bool DeactivateTool()
@@ -265,5 +294,7 @@ namespace FuzzPhyte.Tools.Samples
                 currentActiveLine.SetTextRotation(angle);
             }
         }
+
+       
     }
 }
