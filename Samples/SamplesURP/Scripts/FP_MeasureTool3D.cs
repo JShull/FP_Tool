@@ -12,7 +12,7 @@ namespace FuzzPhyte.Tools.Samples
     /// This class is using the Unity UI Interfaces like IDrag/IPoint/etc. which means we need a canvas/RectTransform to work with
     /// </summary>
     [RequireComponent(typeof(RectTransform))]
-    public class FP_MeasureTool3D : FP_Tool<FP_MeasureToolData>, IPointerDownHandler, IDragHandler, IPointerUpHandler
+    public class FP_MeasureTool3D : FP_Tool<FP_MeasureToolData>, IFPUIEventListener<FP_Tool<FP_MeasureToolData>>
     {
         public Transform ParentDecals;
         public GameObject FirstPointObjectTest;
@@ -45,17 +45,25 @@ namespace FuzzPhyte.Tools.Samples
                 currentActiveLine.transform.SetParent(ParentDecals);
             }
         }
-        public void OnDrag(PointerEventData eventData)
+        /// <summary>
+        /// Process Event Data and pass it to the tool
+        /// </summary>
+        /// <param name="eventData"></param>
+        public void OnUIEvent(FP_UIEventData<FP_Tool<FP_MeasureToolData>> eventData)
+        {
+
+        }
+        public void PointerDrag(PointerEventData eventData)
         {
            
         }
 
-        public void OnPointerDown(PointerEventData eventData)
+        public void PointerDown(PointerEventData eventData)
         {
            
         }
 
-        public void OnPointerUp(PointerEventData eventData)
+        public void PointerUp(PointerEventData eventData)
         {
            
         }

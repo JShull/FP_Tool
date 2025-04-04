@@ -79,7 +79,10 @@ namespace FuzzPhyte.Tools.Samples
             Debug.LogWarning($"Didn't activate the tool?");
             return false;
         }
-        //JOHN
+        /// <summary>
+        /// Interface method for the FP UI Event Listener system to process the event data
+        /// </summary>
+        /// <param name="eventData"></param>
         public void OnUIEvent(FP_UIEventData<FP_Tool<FP_MeasureToolData>> eventData)
         {
             Debug.LogWarning($"OnUIEvent was processed {eventData.EventType} {eventData.AdditionalData} {this} {ToolIsCurrent}");
