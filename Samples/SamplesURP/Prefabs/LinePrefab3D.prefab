@@ -27,7 +27,7 @@ Transform:
   m_GameObject: {fileID: 716873236662534562}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -3.58, y: 47.754, z: 3.32}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -66,7 +66,7 @@ MonoBehaviour:
   LineParent: {fileID: 5874037868087297061}
   LineDecal: {fileID: 3247276469337815750}
   MeasurementText: {fileID: 4662847514499873590}
-  TheTool: {fileID: 0}
+  toolCam: {fileID: 0}
 --- !u!1 &2120151478028059792
 GameObject:
   m_ObjectHideFlags: 0

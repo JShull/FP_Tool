@@ -13,9 +13,7 @@ namespace FuzzPhyte.Tools.Samples
         public DecalProjector LineDecal;
         [Header("Measurement")]
         public TextMeshPro MeasurementText;
-        #region Testion
-        public FP_MeasureTool3D TheTool;
-        #endregion
+        [SerializeField]protected Camera toolCam;
 
         public override void Setup(FP_Tool<FP_MeasureToolData> tool)
         {
@@ -39,15 +37,13 @@ namespace FuzzPhyte.Tools.Samples
             myTool.OnEnding += OnToolEnding;
             myTool.OnDeactivated += OnToolDeactivated;
         }
-        [ContextMenu("Testing, first point 0,0,0")]
-        public void TestingDropFirst()
+        /// <summary>
+        /// Pass in the camera relative our system
+        /// </summary>
+        /// <param name="theToolCam"></param>
+        public void CameraPass(Camera theToolCam)
         {
-            DropFirstPoint(new Vector3(0, 0, 0));
-        }
-        [ContextMenu("Testing, second point 2,2,4")]
-        public void TestDropSecond()
-        {
-            DropSecondPoint(new Vector3(2, 2, 4));
+            toolCam = theToolCam;
         }
         public override void DropFirstPoint(Vector3 worldPos)
         {
@@ -61,27 +57,30 @@ namespace FuzzPhyte.Tools.Samples
         public override void DropSecondPoint(Vector3 worldPos)
         {
             EndPointDecal.transform.position = worldPos;
-            //need to update our URP decal
-            UpdateDecal(StartPointDecal.transform.position, worldPos);
-        }
-        protected void UpdateDecal(Vector3 p1, Vector3 p2)
-        {
+            //need to update our URP decal rotation relative the camera right/left and the points
+            //UpdateDecal(StartPointDecal.transform.position, worldPos);
+            var p1 = StartPointDecal.transform.position;
+            var p2 = worldPos;
             Vector3 direction = (p2 - p1);
             float distance = direction.magnitude;
 
             // Midpoint
             Vector3 midPoint = (p1 + p2) * 0.5f;
             LineParent.transform.position = midPoint;
-
-            // Rotation
-            LineParent.transform.rotation = Quaternion.LookRotation(direction.normalized, Vector3.up);
-
-            // Scale decal projector
+            Vector3 dirNormalized = direction.normalized;
             LineDecal.size = new Vector3(
-                myTool.ToolData.lineWidth,      // Width stays fixed (in decal's local X)
-                distance,            // Height adapts (in decal's local Y)
-                myTool.ToolData.lineDepth // Keep your projection depth
+               myTool.ToolData.lineWidth,      // Width stays fixed (in decal's local X)
+               distance,            // Height adapts (in decal's local Y)
+               myTool.ToolData.lineDepth // Keep your projection depth
             );
+
+            Vector3 camRight = toolCam.transform.right;
+            float camRightness = Vector3.Dot(direction, camRight);
+            LineParent.transform.rotation = Quaternion.LookRotation(dirNormalized, Vector3.up);
+            if (camRightness < 0)
+            {
+                LineParent.transform.localRotation *= Quaternion.Euler(0f, 180f, 0f);
+            }
         }
 
         public override void UpdateText(string text)
@@ -92,16 +91,9 @@ namespace FuzzPhyte.Tools.Samples
         {
             MeasurementText.transform.localPosition = offsetValue;
         }
-        
         public override void OnToolDeactivated(FP_Tool<FP_MeasureToolData> tool)
         {
             if (tool != myTool) return;
-
-            //StartPointDecal.SetActive(false);
-            //EndPointDecal.SetActive(false);
-            //LineParent.gameObject.SetActive(false);
-            //MeasurementText.text = string.Empty;
         }
-
     }
 }

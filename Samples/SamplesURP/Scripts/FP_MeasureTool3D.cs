@@ -14,8 +14,6 @@ namespace FuzzPhyte.Tools.Samples
     public class FP_MeasureTool3D : FP_Tool<FP_MeasureToolData>, IFPUIEventListener<FP_Tool<FP_MeasureToolData>>
     {
         public Transform ParentDecals;
-        public GameObject FirstPointObjectTest;
-        public GameObject SecondPointObjectTest;
         [Tooltip("We are 2D casting into 3D Space - this RectTransform is our boundary")]
         [SerializeField] protected RectTransform measurementParentSpace;
         [Header("Unity Events")]
@@ -86,7 +84,7 @@ namespace FuzzPhyte.Tools.Samples
         /// <param name="eventData"></param>
         public void OnUIEvent(FP_UIEventData<FP_Tool<FP_MeasureToolData>> eventData)
         {
-            Debug.LogWarning($"OnUIEvent was processed {eventData.EventType} {eventData.AdditionalData} {this} {ToolIsCurrent}");
+            //Debug.LogWarning($"OnUIEvent was processed {eventData.EventType} {eventData.AdditionalData} {this} {ToolIsCurrent}");
             if (!ToolIsCurrent)
             {
                 return;
@@ -94,7 +92,7 @@ namespace FuzzPhyte.Tools.Samples
             if (eventData.TargetObject == this.gameObject)
             {
                 //it's me
-                Debug.LogWarning($"Event Data Target Object is me {eventData.TargetObject} {this}");
+                //Debug.LogWarning($"Event Data Target Object is me {eventData.TargetObject} {this}");
                 switch (eventData.EventType)
                 {
                     case FP_UIEventType.PointerDown:
@@ -140,6 +138,7 @@ namespace FuzzPhyte.Tools.Samples
                         if (currentActiveLine!=null)
                         {
                             currentActiveLine.Setup(this);
+                            currentActiveLine.CameraPass(ToolCamera);
                             currentActiveLine.DropFirstPoint(startPosition);
                             currentActiveLine.DropSecondPoint(endPosition);
                             UpdateMeasurementText();
@@ -241,28 +240,9 @@ namespace FuzzPhyte.Tools.Samples
                 {
                     Debug.LogWarning($"Failed to convert the distance {distance} to the correct measurement system {toolData.measurementUnits}");
                     currentActiveLine.UpdateText($"{toolData.measurementPrefix} {distance} pixels");
-
                 }
-
-                Vector3 midPoint = (startPosition + endPosition) * 0.5f;
-                Vector3 direction = (endPosition - startPosition).normalized;
-                Vector3 upRef = Vector3.up;
-                if (Vector3.Dot(direction, upRef) > 0.99f) // Avoid parallel up vector
-                    upRef = Vector3.right; // Switch to right axis
-
-                Vector3 perpendicular = Vector3.Cross(direction, upRef).normalized;
-              
-                // Offset
-                Vector3 offset = perpendicular * toolData.measurementLabelOffsetPixels.y +
-                                 direction * toolData.measurementLabelOffsetPixels.x;
-
-                // Final position
-                Vector3 labelPosition = midPoint + offset;
-                // Apply offset relative to perpendicular direction
-               
-                currentActiveLine.UpdateTextLocation(toolData.measurementLabelOffsetPixels);
-                float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
-                //currentActiveLine.SetTextRotation(direction);
+                currentActiveLine.UpdateTextLocation(ToolData.measurementLabelOffsetPixels);
+                
             }
         }
         [Header("Additional Details")]

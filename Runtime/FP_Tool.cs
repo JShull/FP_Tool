@@ -45,13 +45,13 @@ namespace FuzzPhyte.Tools
 
         public virtual bool StartTool()
         {
-            Debug.Log($"Starting tool {this}");
+            //Debug.Log($"Starting tool {this}");
             return SetState(FPToolState.Starting);
         }
 
         public virtual bool UseTool()
         {
-            Debug.Log($"Using tool {this}");
+            //Debug.Log($"Using tool {this}");
             return SetState(FPToolState.ActiveUse);
         }
 
