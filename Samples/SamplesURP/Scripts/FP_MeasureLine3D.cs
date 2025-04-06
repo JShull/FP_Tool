@@ -97,10 +97,10 @@ namespace FuzzPhyte.Tools.Samples
         {
             if (tool != myTool) return;
 
-            StartPointDecal.SetActive(false);
-            EndPointDecal.SetActive(false);
-            LineParent.gameObject.SetActive(false);
-            MeasurementText.text = string.Empty;
+            //StartPointDecal.SetActive(false);
+            //EndPointDecal.SetActive(false);
+            //LineParent.gameObject.SetActive(false);
+            //MeasurementText.text = string.Empty;
         }
 
     }
