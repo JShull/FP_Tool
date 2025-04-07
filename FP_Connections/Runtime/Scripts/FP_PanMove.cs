@@ -8,6 +8,9 @@ namespace FuzzPhyte.Tools.Connections
 
     public class FP_PanMove : FP_Tool<PartData>, IFPUIEventListener<FP_Tool<PartData>>
     {
+        public RectTransform movePanRectParentPanel;
+        public Transform ForwardPlaneLocation;
+        public float RaycastMaxDistance = 15;
         public List<Collider> SnapPoints = new List<Collider>();
         [SerializeField]
         protected List<Collider> UsedSnapPoints = new List<Collider>();
@@ -47,8 +50,6 @@ namespace FuzzPhyte.Tools.Connections
             {
                 case FP_UIEventType.PointerDown:
                     PointerDown(eventData.UnityPointerEventData);
-                    SelectionStart(eventData.TargetObject);
-                    
                     break;
                 case FP_UIEventType.PointerUp:
                     PointerUp(eventData.UnityPointerEventData);
@@ -62,7 +63,34 @@ namespace FuzzPhyte.Tools.Connections
         public void PointerDown(PointerEventData eventData)
         {
             //throw new NotImplementedException();
-            Raycast
+            if (RectTransformUtility.RectangleContainsScreenPoint(movePanRectParentPanel, eventData.position,ToolCamera))
+            {
+                if(StartTool())
+                {
+                    //raycast time
+                    Plane fPlane = new Plane(ToolCamera.transform.forward,ForwardPlaneLocation.position);
+                    var PointData = FP_UtilityData.GetMouseWorldPositionOnPlane(ToolCamera,eventData.position,fPlane);
+                    RaycastHit potentialHit;
+                    //var worldPoint = ToolCamera.ScreenToWorldPoint(eventData.position);
+                    var direction = (PointData.Item2 - ToolCamera.transform.position).normalized;
+                    UnityEngine.Ray ray = new Ray(ToolCamera.transform.position, direction);
+                    Debug.LogWarning($"Ray: {ray.origin} | {ray.direction}");
+                    Debug.DrawRay(ray.origin, ray.direction * RaycastMaxDistance, FP_UtilityData.ReturnColorByStatus(SequenceStatus.Unlocked), 5f);
+                    Physics.Raycast(ray, out potentialHit, RaycastMaxDistance);
+                    if(potentialHit.collider!=null)
+                    {
+                        Debug.Log($"Hit: {potentialHit.collider.name}");
+                        var FPMRItem = potentialHit.collider.gameObject.GetComponent<FP_CollideItem>();
+                        if(FPMRItem!=null)
+                        {
+                            selectedItemDetails=FPMRItem.MoveRotateItem;
+                            Debug.Log($"Hit: {selectedItemDetails.name}");
+                            SelectionStart(selectedItemDetails.gameObject);
+                        }
+                    }
+                }
+                
+            }
         }
 
         public void PointerUp(PointerEventData eventData)
@@ -77,7 +105,14 @@ namespace FuzzPhyte.Tools.Connections
             {
                 return;
             }
-            UpdateMouseScreenPosition(eventData.position);
+            if(!ToolIsCurrent)
+            {
+                return;
+            }
+            if(UseTool())
+            {
+                UpdateMouseScreenPosition(eventData.position);
+            }
         }
         #endregion
         /// <summary>
@@ -189,6 +224,19 @@ namespace FuzzPhyte.Tools.Connections
         /// </summary>
         public void SelectionEnd()
         {
+            Debug.Log($"On Pointer up");
+            if(!ToolIsCurrent)
+            {
+                return;
+            }
+            if (EndTool())
+            {
+                DeactivateTool();
+            }else
+            {
+                 DeactivateTool();
+            }
+            return;
             var nearPoint = FindNearestSnapPosition(selectedItem.transform.position);
             Debug.Log($"Return Location:{nearPoint.Item1}, from {nearPoint.Item2.gameObject.name}");
             selectedItem.transform.position = nearPoint.Item1;
