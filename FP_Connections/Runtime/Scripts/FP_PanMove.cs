@@ -1,28 +1,29 @@
-namespace FuzzPhyte.ThreeD
+namespace FuzzPhyte.Tools.Connections
 {
     using System.Collections.Generic;
     using UnityEngine;
     using System;
+    using FuzzPhyte.Utility;
+    using UnityEngine.EventSystems;
 
-    public class FP_PanMove : MonoBehaviour
+    public class FP_PanMove : FP_Tool<PartData>, IFPUIEventListener<FP_Tool<PartData>>
     {
         public List<Collider> SnapPoints = new List<Collider>();
         [SerializeField]
-        private List<Collider> UsedSnapPoints = new List<Collider>();
-        private Collider lastHitSnapPoint;
+        protected List<Collider> UsedSnapPoints = new List<Collider>();
+        protected Collider lastHitSnapPoint;
         [SerializeField]
-        private GameObject selectedItem;
+        protected GameObject selectedItem;
         [SerializeField]
         private FP_MoveRotateItem selectedItemDetails;
-        [SerializeField]
-        private Camera currentCam;
-        private Vector2 mouseScreenPos;
-        private Vector3 originalLocationOnActive;
+        
+        protected Vector2 mouseScreenPos;
+        protected Vector3 originalLocationOnActive;
         /// <summary>
         /// this we might adjust with other input information as needed
         /// </summary>
-        private float originalDistanceFromCam;
-        private float zOffsetDistance = 0f;
+        protected float originalDistanceFromCam;
+        protected float zOffsetDistance = 0f;
         public bool UseOffsetGridSnapping = true;
         public float OffsetGridSize = 0.025f;
         [SerializeField]
@@ -38,7 +39,47 @@ namespace FuzzPhyte.ThreeD
         [Tooltip("Quick fix")]
         public bool UseGameObjectPositionNotCollider;
         public event Action<Collider,GameObject> OnSelectionEndAction;
-        
+
+        #region Interface Requirements
+        public void OnUIEvent(FP_UIEventData<FP_Tool<PartData>> eventData)
+        {
+            switch (eventData.EventType)
+            {
+                case FP_UIEventType.PointerDown:
+                    PointerDown(eventData.UnityPointerEventData);
+                    SelectionStart(eventData.TargetObject);
+                    
+                    break;
+                case FP_UIEventType.PointerUp:
+                    PointerUp(eventData.UnityPointerEventData);
+                    break;
+                case FP_UIEventType.Drag:
+                    PointerDrag(eventData.UnityPointerEventData);
+                    break;
+            }
+        }
+
+        public void PointerDown(PointerEventData eventData)
+        {
+            //throw new NotImplementedException();
+            Raycast
+        }
+
+        public void PointerUp(PointerEventData eventData)
+        {
+            //throw new NotImplementedException();
+            SelectionEnd();
+        }
+
+        public void PointerDrag(PointerEventData eventData)
+        {
+            if (!isMoving)
+            {
+                return;
+            }
+            UpdateMouseScreenPosition(eventData.position);
+        }
+        #endregion
         /// <summary>
         /// Assuming something else is handling mouse information - we just need that :)
         /// </summary>
@@ -55,7 +96,7 @@ namespace FuzzPhyte.ThreeD
             //move item
             if (selectedItem == null) return;
 
-            Vector3 calculatedPos = currentCam.ScreenToWorldPoint(new Vector3(mouseScreenPos.x, mouseScreenPos.y, originalDistanceFromCam+ zOffsetDistance));
+            Vector3 calculatedPos = ToolCamera.ScreenToWorldPoint(new Vector3(mouseScreenPos.x, mouseScreenPos.y, originalDistanceFromCam+ zOffsetDistance));
             var returnLocation = calculatedPos;
             //get items localized location based on items information and restrictions
             //we are then going to override that if we can or have the authority to do so
@@ -80,14 +121,7 @@ namespace FuzzPhyte.ThreeD
 
             selectedItem.transform.position = returnLocation;
         }
-        public void Update()
-        {
-            if(!isMoving)
-            {
-                return;
-            }
-            UpdateMouseScreenPosition(Input.mousePosition);
-        }
+        
         
         /// <summary>
         /// tweak our z offset from another user input like forward/backward key
@@ -114,6 +148,7 @@ namespace FuzzPhyte.ThreeD
             
         }
         #region Action Based Functions
+        
         /// <summary>
         /// public access for selection start based events
         /// Coming in from the CC_Pickable Events
@@ -136,13 +171,14 @@ namespace FuzzPhyte.ThreeD
             selectedItemDetails = item.GetComponent<FP_MoveRotateItem>();
             originalLocationOnActive =item.transform.position;
             //confirm camera
-            if(currentCam==null)
+            if(ToolCamera==null)
             {
-                Debug.LogWarning($"No camera set: using main camera");
-                currentCam = Camera.main;
+                Debug.LogError($"No camera set: using main camera");
+                return;
+                //currentCam = Camera.main;
             }
             //set up our distance from camera
-            originalDistanceFromCam = Vector3.Distance(item.transform.position, currentCam.transform.position);
+            originalDistanceFromCam = Vector3.Distance(item.transform.position, ToolCamera.transform.position);
             //fin
             isMoving = true;
             selectedItemDetails.MoveStarted();
@@ -212,7 +248,7 @@ namespace FuzzPhyte.ThreeD
         {
             //lets try seeing if we have a direct hit first
             Collider potentialHit;
-            UnityEngine.Ray ray = currentCam.ScreenPointToRay(Input.mousePosition);
+            UnityEngine.Ray ray = ToolCamera.ScreenPointToRay(mouseScreenPos);
             var foundMatch = TryGetSnapPointFromRaycast(ray, out potentialHit);
             if (foundMatch)
             {
@@ -284,7 +320,7 @@ namespace FuzzPhyte.ThreeD
         /// <param name="mousePosition"></param>
         /// <param name="snapObject"></param>
         /// <returns></returns>
-        private bool TryGetSnapPointFromRaycast(UnityEngine.Ray ray, out Collider snapObject)
+        private bool TryGetSnapPointFromRaycast(Ray ray, out Collider snapObject)
         {
             Debug.LogWarning($"Try to get snap point from raycast");
             var hitPts=Physics.RaycastAll(ray);
@@ -310,5 +346,7 @@ namespace FuzzPhyte.ThreeD
             snapObject = null;
             return false;
         }
+
+        
     }
 }

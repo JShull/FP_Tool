@@ -1,79 +1,93 @@
-
-namespace FuzzPhyte.Connections
+namespace FuzzPhyte.Tools.Connections
 {
+    using FuzzPhyte.Utility;
     using System.Collections;
     using System.Collections.Generic;
     using System.Linq;
     using UnityEngine;
-    using FuzzPhyte.Tools;
     using UnityEngine.EventSystems;
 
     /// <summary>
-    /// Responsible to manage the connections on this 'part'
+    /// Responsible to manage the Pointer Event Coming in
     /// OVRPipePart
     /// </summary>
-    public class ConnectionPart : MonoBehaviour
+    public class ConnectionPart : FP_Tool<PartData>, IFPUIEventListener<FP_Tool<PartData>>
     {
         [Header("Pipe Related")]
-        public ConnectableItem ThePart;
+        public ConnectableItem TheItem;
         public GameObject FixedAttachedPrefab;
         public Transform FixedAttachedParent;
-
+        public Transform ConnectionPtParent;
         //data
         public List<ConnectionToolTrigger> ConnectionPointTriggersListeners = new List<ConnectionToolTrigger>();
         public Dictionary<ConnectionPointUnity, ConnectionToolTrigger> ConnectionPointsTriggersLookUp = new Dictionary<ConnectionPointUnity, ConnectionToolTrigger>();
         [SerializeField]
         [Tooltip("Hold a list of bolts by ConnectionPointUnity")]
-        private Dictionary<ConnectionPointUnity, List<ConnectionFixed>> WeldsByPoint = new Dictionary<ConnectionPointUnity, List<ConnectionFixed>>();
+        protected Dictionary<ConnectionPointUnity, List<ConnectionFixed>> WeldsByPoint = new Dictionary<ConnectionPointUnity, List<ConnectionFixed>>();
         [Tooltip("Hold a Connectable Item by a Point")]
-        private Dictionary<ConnectionPointUnity, ConnectableItem> PossibleTargetByPoint = new Dictionary<ConnectionPointUnity, ConnectableItem>();
+        protected Dictionary<ConnectionPointUnity, ConnectableItem> PossibleTargetByPoint = new Dictionary<ConnectionPointUnity, ConnectableItem>();
         [Tooltip("Match the ConnectionPointUnity with the Target ConnectionPointUnity")]
-        private Dictionary<ConnectionPointUnity, ConnectionPointUnity> AlignmentConnectionPointPair = new Dictionary<ConnectionPointUnity, ConnectionPointUnity>();
-        public virtual void Start()
+        protected Dictionary<ConnectionPointUnity, ConnectionPointUnity> AlignmentConnectionPointPair = new Dictionary<ConnectionPointUnity, ConnectionPointUnity>();
+        public virtual void Awake()
         {
-            for (int i = 0; i < ThePart.MyConnectionPoints.Count; i++)
+            //build out the connectionPointData from our PartData
+            ConnectionPointTriggersListeners.Clear();
+            List<ConnectionPointUnity> cachedPoints = new List<ConnectionPointUnity>();
+            for (int i = 0; i < toolData.AllConnectionPointsForPart.Count; i++)
             {
-                var aPoint = ThePart.MyConnectionPoints[i];
-                if (aPoint.gameObject.GetComponent<ConnectionToolTrigger>() != null)
+                var curPointData = toolData.AllConnectionPointsForPart[i];
+                GameObject prefabSpawned = GameObject.Instantiate(toolData.ConnectionEndPrefab, ConnectionPtParent);
+                
+                //get component
+                var cpu = prefabSpawned.GetComponent<ConnectionPointUnity>();
+                if(cpu != null)
                 {
-                    ConnectionPointsTriggersLookUp.Add(aPoint, aPoint.gameObject.GetComponent<ConnectionToolTrigger>());
-                    if (aPoint.TheConnectItem == null)
+                    prefabSpawned.gameObject.name = curPointData.connectionType.ToString()+"_"+i;
+                    cpu.SetupDataFromDataFile(TheItem, curPointData);
+                    cpu.ConnectionPointStatusPt = ConnectionPointStatus.None;
+                    if (cpu.MyToolTriggerRef != null)
                     {
-                        //it's probably me
-                        aPoint.TheConnectItem = ThePart;
+                        ConnectionPointTriggersListeners.Add(cpu.MyToolTriggerRef);
+                        ConnectionPointsTriggersLookUp.Add(cpu, cpu.MyToolTriggerRef);
                     }
+                    else
+                    {
+                        Debug.LogError($"CPU Tool trigger ref is missing");
+                    }
+                    cachedPoints.Add(cpu);
                 }
                 else
                 {
-                    Debug.LogError($"I am missing an OVRToolTrigger on {aPoint.gameObject.name}!");
+                    Debug.LogError($"This needs a ConnectionPointUnity script");
                 }
+
             }
+            
+            TheItem.SetupConnectionPart(toolData.UniquePartID, cachedPoints);
         }
+        
         public virtual void OnEnable()
         {
-            
-            ThePart.OnAlignmentFail += OnPartAlignmentFail;
-            ThePart.OnAlignmentSuccess += OnPartAlignmentMade;
-            ThePart.OnConnectionSuccess += OnPartConnectionMade;
-            ThePart.OnConnectionRemoved += OnPartDisconnect;
-            ThePart.OnConnectionFail += OnPartConnectionFail;
-
+            TheItem.OnAlignmentFail += OnPartAlignmentFail;
+            TheItem.OnAlignmentSuccess += OnPartAlignmentMade;
+            TheItem.OnConnectionSuccess += OnPartConnectionMade;
+            TheItem.OnConnectionRemoved += OnPartDisconnect;
+            TheItem.OnConnectionFail += OnPartConnectionFail;
 
             foreach (var cp in ConnectionPointTriggersListeners)
             {
                 cp.OnPartTriggerEnterAction += OnConnectionPointTriggerEnter;
                 cp.OnPartTriggerExitAction += OnConnectionPointTriggerExit;
-                cp.gameObject.name = $"{ThePart.GetUniqueIndexPos}_{cp.gameObject.name}";
+                cp.gameObject.name = $"{TheItem.GetUniqueIndexPos}_{cp.gameObject.name}";
             }
         }
         public virtual void OnDisable()
         {
-            
-            ThePart.OnAlignmentFail -= OnPartAlignmentFail;
-            ThePart.OnAlignmentSuccess -= OnPartAlignmentMade;
-            ThePart.OnConnectionSuccess -= OnPartConnectionMade;
-            ThePart.OnConnectionRemoved -= OnPartDisconnect;
-            ThePart.OnConnectionFail -= OnPartConnectionFail;
+            TheItem.OnAlignmentFail -= OnPartAlignmentFail;
+            TheItem.OnAlignmentSuccess -= OnPartAlignmentMade;
+            TheItem.OnConnectionSuccess -= OnPartConnectionMade;
+            TheItem.OnConnectionRemoved -= OnPartDisconnect;
+            TheItem.OnConnectionFail -= OnPartConnectionFail;
             foreach (var cp in ConnectionPointTriggersListeners)
             {
                 cp.OnPartTriggerEnterAction -= OnConnectionPointTriggerEnter;
@@ -81,6 +95,31 @@ namespace FuzzPhyte.Connections
             }
         }
         #region Listeners for External Pointers/Events
+        
+        
+        
+       
+        #endregion
+        #region Interface Requirements for Input Information
+        /// <summary>
+        /// Called from the actual moving 'Tool'
+        /// </summary>
+        /// <param name="eventData"></param>
+
+        public void OnUIEvent(FP_UIEventData<FP_Tool<PartData>> eventData)
+        {
+            switch (eventData.EventType)
+            {
+                case FP_UIEventType.PointerDown:
+                    PointerDown(eventData.UnityPointerEventData);
+                    break;
+                case FP_UIEventType.PointerUp:
+                    PointerUp(eventData.UnityPointerEventData);
+                    break;
+                case FP_UIEventType.Drag:
+                    break;
+            }
+        }
         /// <summary>
         /// Unity Event Wrapper 
         /// whatever is managing our input (mouse down?) will need to call this and pass
@@ -88,18 +127,19 @@ namespace FuzzPhyte.Connections
         /// Haptic call is made here
         /// </summary>
         /// <param name="pointerEvent"></param>
-        public void HandleGrabEvent(PointerEventData pointerEvent)
+        public void PointerDown(PointerEventData eventData)
         {
-            
+            //throw new System.NotImplementedException();
+            Debug.Log($"{this.gameObject.name}: Pointer down");
         }
         /// <summary>
         /// Unity Event Wrapper tied to the PointerEventData class
         /// E.g. when we 'drop' our part we want to check for a connection
         /// </summary>
         /// <param name="pointerEvent"></param>
-        public void HandleReleaseEvent(PointerEventData pointerEvent)
+        public void PointerUp(PointerEventData eventData)
         {
-        
+            Debug.Log($"{this.gameObject.name}: Pointer UP");
             // see if we had a possible pipe target
             // possible target comes in from the trigger events
             // loop through our dictionary of possible targets
@@ -131,7 +171,7 @@ namespace FuzzPhyte.Connections
                         //build up all possible points based on current connection points and connected items
                         //var allOpenPossiblePoints = ThePipe.GetOpenConnectionPoints();
 
-                        var greatSuccess = ThePart.TryAlignmentOnRelease(theTarget);
+                        var greatSuccess = TheItem.TryAlignmentOnRelease(theTarget);
                         if (greatSuccess)
                         {
                             Debug.LogWarning($"Pipe Grab Alignment worked!");
@@ -144,6 +184,11 @@ namespace FuzzPhyte.Connections
                     }
                 }
             }
+        }
+
+        public void PointerDrag(PointerEventData eventData)
+        {
+            
         }
         #endregion
         #region Delegate stuff
@@ -309,7 +354,7 @@ namespace FuzzPhyte.Connections
                         //ThePipe.IsPartiallyConnected = true;
                         thePossibleTarget.IsPartiallyConnected = true;
                         // very important IsPartiallyConnected will make sure we only run this code once
-                        ThePart.TryToMakeAconnection(thePossibleTarget, thePossibleConnection, ptData);
+                        TheItem.TryToMakeAconnection(thePossibleTarget, thePossibleConnection, ptData);
                     }
                     if (fixedWelds >= boltsByConnectionPoint.Count)
                     {
@@ -346,7 +391,7 @@ namespace FuzzPhyte.Connections
                 Debug.LogWarning($"Turned off the trigger on {cPGameObject.name}!");
             }
             // copy data first
-            ThePart.CopyIncomingData(theItemToCheck, thePointToCheck, myPointTrigger);
+            TheItem.CopyIncomingData(theItemToCheck, thePointToCheck, myPointTrigger);
 
             // clean up
             // remove all listeners?
@@ -389,20 +434,20 @@ namespace FuzzPhyte.Connections
             }
             
             // clean up internal connection list InternalAvailableConnections and drop myPointTrigger
-            if (ThePart.InternalAvailableConnections.Contains(myPointTrigger))
+            if (TheItem.InternalAvailableConnections.Contains(myPointTrigger))
             {
-                ThePart.InternalAvailableConnections.Remove(myPointTrigger);
+                TheItem.InternalAvailableConnections.Remove(myPointTrigger);
                 myPointTrigger.GetComponent<ConnectionToolTrigger>().SetActiveTrigger(false);
             }
-            if (ThePart.InternalAvailableConnections.Contains(thePointToCheck))
+            if (TheItem.InternalAvailableConnections.Contains(thePointToCheck))
             {
-                ThePart.InternalAvailableConnections.Remove(thePointToCheck);
+                TheItem.InternalAvailableConnections.Remove(thePointToCheck);
                 thePointToCheck.GetComponent<ConnectionToolTrigger>().SetActiveTrigger(false);
             }
             // re-add our triggers based on the updated data from ThePipe
-            for (int i = 0; i < ThePart.MyConnectionPoints.Count; i++)
+            for (int i = 0; i < TheItem.MyConnectionPoints.Count; i++)
             {
-                var aPoint = ThePart.MyConnectionPoints[i];
+                var aPoint = TheItem.MyConnectionPoints[i];
                 Debug.LogWarning($"Readding Triggers: {aPoint.gameObject.name}");
                 if (aPoint.gameObject.GetComponent<ConnectionToolTrigger>() != null)
                 {
@@ -414,7 +459,7 @@ namespace FuzzPhyte.Connections
                     cpTrigger.OnPartTriggerEnterAction += OnConnectionPointTriggerEnter;
                     cpTrigger.OnPartTriggerExitAction += OnConnectionPointTriggerExit;
 
-                    aPoint.TheConnectItem = ThePart;
+                    aPoint.UpdateConnectableItem(TheItem);
                     Debug.LogWarning($"Setting the connect item to {theItemToCheck.gameObject.name} on {aPoint.gameObject.name} and registered the trigger: {cpTrigger.gameObject.name}!");
                 }
                 else
@@ -440,7 +485,7 @@ namespace FuzzPhyte.Connections
 
 
         #region Callbacks for Trigger Events Tied to ConnectionPointUnity
-        private void OnConnectionPointTriggerEnter(Collider item, ConnectionPointUnity myPoint, ConnectionPointUnity otherPoint)
+        protected void OnConnectionPointTriggerEnter(Collider item, ConnectionPointUnity myPoint, ConnectionPointUnity otherPoint)
         {
             if (otherPoint.TheConnectItem != null)
             {
@@ -465,7 +510,7 @@ namespace FuzzPhyte.Connections
                 }
             }
         }
-        private void OnConnectionPointTriggerExit(Collider item, ConnectionPointUnity myPoint, ConnectionPointUnity otherPoint)
+        protected void OnConnectionPointTriggerExit(Collider item, ConnectionPointUnity myPoint, ConnectionPointUnity otherPoint)
         {
             if (item.gameObject.GetComponent<ConnectionPointUnity>() != null)
             {
@@ -486,6 +531,7 @@ namespace FuzzPhyte.Connections
                 }
             }
         }
+
         #endregion
         #endregion
     }

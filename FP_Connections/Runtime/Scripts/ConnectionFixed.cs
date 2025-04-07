@@ -1,4 +1,4 @@
-namespace FuzzPhyte.Connections
+namespace FuzzPhyte.Tools.Connections
 {
     using UnityEngine;
 

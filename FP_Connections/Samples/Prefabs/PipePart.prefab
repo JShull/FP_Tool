@@ -275,7 +275,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c6e3fcf3d43aaed4eaeb1f9fabf586b3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  ThePart: {fileID: 5763739437934367983}
+  TheItem: {fileID: 5763739437934367983}
   FixedAttachedPrefab: {fileID: 5804459803802063813, guid: 3c4290988444eae4b8a0ee833c604ade, type: 3}
   FixedAttachedParent: {fileID: 6390714346782579300}
   ConnectionPointTriggersListeners:
@@ -293,9 +293,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5982d9b213db75d4ca2bf968af29d607, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  testingActive: 0
-  PrimaryItem: 0
-  TestOtherItem: {fileID: 0}
   ConnectionDistanceMax: 1.5
   FakePivot: {fileID: 7888502721376759264}
   connectedLockedInPlace: 0

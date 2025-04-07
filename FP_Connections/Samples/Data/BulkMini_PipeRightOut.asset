@@ -13,15 +13,22 @@ MonoBehaviour:
   m_Name: BulkMini_PipeRightOut
   m_EditorClassIdentifier: 
   UniqueID: QnVsa01pbml8UGlwZVJpZ2h0T3V0fDEsMCwwLDE=
-  connectionType: RightPipe
+  connectionType: RightPipeCPU
   width: 0.5
   ConnectionUnitOfMeasure: 10
   localForward: {x: 1, y: 0, z: 0}
+  TriggerSize: {x: 0.025, y: 0.025, z: 0.025}
+  TriggerCenter: {x: 0.0125, y: 0, z: 0}
+  LocalRelativePivotPosition: {x: 0.14885, y: 0, z: 0}
   localRotationAngles:
   - {x: 0, y: 0, z: 90}
   - {x: 0, y: 0, z: -90}
   - {x: 0, y: 90, z: 0}
   - {x: 0, y: -90, z: 0}
+  AngleTolerance: 30
+  InitAlignmentTolerance: 20
+  TriggerTagCompare: PartConnectionPoint
+  PercentOfMeasure: 0.2
   localConnectors:
   - {x: 0, y: 0.6, z: 0}
   - {x: 0, y: -0.6, z: 0}

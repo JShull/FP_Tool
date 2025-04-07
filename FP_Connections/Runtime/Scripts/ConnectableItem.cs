@@ -1,19 +1,11 @@
-namespace FuzzPhyte.Connections
+namespace FuzzPhyte.Tools.Connections
 {
-    using System.Collections;
     using System.Collections.Generic;
     using System.Linq;
     using UnityEngine;
 
-
     public class ConnectableItem : MonoBehaviour
     {
-        #region Testing
-        [SerializeField]
-        private bool testingActive;
-        public bool PrimaryItem;
-        public ConnectableItem TestOtherItem;
-        #endregion
         #region Delegate and Actions
         public delegate void ConnectionAction(ConnectableItem item, ConnectionPointUnity connectionPoint, ConnectableItem targetItem, ConnectionPointUnity targetPoint);
         public ConnectionAction OnAlignmentFail;
@@ -22,6 +14,7 @@ namespace FuzzPhyte.Connections
         public ConnectionAction OnConnectionFail;
         public ConnectionAction OnConnectionRemoved;
         #endregion
+        [Header("Parameters")]
         public float ConnectionDistanceMax = 1.5f;
         public Transform FakePivot;
         //public Rigidbody MyRigidBody;
@@ -48,9 +41,9 @@ namespace FuzzPhyte.Connections
         #region New Progress
         [Space]
         [Header("Connectable Item Data")]
+        [Tooltip("This should be equal to myself")]
+        [SerializeField]protected GameObject RootConnectableItemRef;
 
-        public GameObject TheConnectablePrefab;
-        public bool SetupFromStart = false;
         [Space]
         public Transform ColliderParent;
         public Transform ConnectionPointParent;
@@ -63,7 +56,20 @@ namespace FuzzPhyte.Connections
         public int GetUniqueIndexPos { get { return UniqueIndexPos; } }
         public Dictionary<int,ConnectableData> LookupPreviousParts = new Dictionary<int, ConnectableData>();
         public Dictionary<int,List<GameObject>> LookupPreviousColliders = new Dictionary<int, List<GameObject>>();
-        public void SetupData(int uniqueID)
+        
+        public void SetupConnectionPart(int ID,List<ConnectionPointUnity> connectionPoints)
+        {
+            myConnectionPoints.Clear();
+            InternalAvailableConnections.Clear();
+            MyConnectionPoints.AddRange(connectionPoints);
+            InternalAvailableConnections.AddRange(myConnectionPoints);
+            SetupData(ID);
+        }
+        /// <summary>
+        /// We are setting up the internal data ConnectableData from the Editor inside Unity
+        /// </summary>
+        /// <param name="uniqueID"></param>
+        protected void SetupData(int uniqueID)
         {
             UniqueIndexPos = uniqueID;
             List<Vector3> localConnectionPoints = new List<Vector3>();
@@ -74,7 +80,7 @@ namespace FuzzPhyte.Connections
             LookupPreviousParts.Add(
                 UniqueIndexPos,
                 new ConnectableData(
-                    TheConnectablePrefab, 
+                    RootConnectableItemRef, 
                     UniqueIndexPos, 
                     Vector3.zero,
                     localConnectionPoints,
@@ -149,19 +155,7 @@ namespace FuzzPhyte.Connections
             }
         }
         #endregion
-        private void Awake()
-        {
-            //we need to take the Direct Points and put them in ConnectionPoints
-            InternalAvailableConnections.Clear();
-            InternalAvailableConnections.AddRange(myConnectionPoints); 
-        }
-        private void Start()
-        {
-            if (SetupFromStart)
-            {
-                SetupData(UniqueIndexPos);
-            }
-        }
+       
         
         public bool TryToMakeAconnection(ConnectableItem otherItem,ConnectionPointUnity otherPoint,ConnectionPointUnity myPoint)
         {
@@ -237,7 +231,7 @@ namespace FuzzPhyte.Connections
             return false;
         }
 
-        private void AlignTo(ConnectableItem targetItem, ConnectionPointUnity targetPoint, ConnectionPointUnity myPoint, Vector3 dataMyVector, Vector3 dataTargetVector)
+        protected void AlignTo(ConnectableItem targetItem, ConnectionPointUnity targetPoint, ConnectionPointUnity myPoint, Vector3 dataMyVector, Vector3 dataTargetVector)
         {
             // Step 1: Calculate the forward vectors from the connection points
             Vector3 myForward = myPoint.transform.TransformDirection(myPoint.ConnectionPointData.localForward);
@@ -419,27 +413,5 @@ namespace FuzzPhyte.Connections
 
             return openConnectionPoints;
         }
-        #region Testing
-        public void Update()
-        {
-            /*
-            if(!testingActive)
-            {
-                return;
-            }
-            //testing
-            if (Input.GetKeyUp(KeyCode.Space)&& PrimaryItem)
-            {
-                //test current alignment conditions
-                if (TestOtherItem != null)
-                {
-                    var outcome = TryConnectOnRelease(TestOtherItem);
-                    Debug.Log(outcome ? "Connected" : "Not Connected");
-                    
-                }
-            }
-            */
-        }
-        #endregion
     }
 }

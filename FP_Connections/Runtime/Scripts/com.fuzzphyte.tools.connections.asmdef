@@ -1,9 +1,10 @@
 {
-    "name": "com.fuzzphyte.threed",
-    "rootNamespace": "FuzzPhyte.ThreeD",
+    "name": "com.fuzzphyte.tools.connections",
+    "rootNamespace": "FuzzPhyte.Tools.Connections",
     "references": [
-        "com.fuzzphyte.ray",
-        "com.fuzzphyte.utility"
+        "Unity.Mathematics",
+        "com.fuzzphyte.utility",
+        "com.fuzzphyte.tools"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

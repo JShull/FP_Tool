@@ -1,4 +1,4 @@
-namespace FuzzPhyte.Connections
+namespace FuzzPhyte.Tools.Connections
 {
     using UnityEngine;
     using System.Collections;
@@ -6,7 +6,6 @@ namespace FuzzPhyte.Connections
     using UnityEngine.Events;
 
     //pipe = part
-
     public class ConnectionToolTrigger : MonoBehaviour
     {
         public ConnectionPointUnity MyPoint;
@@ -29,7 +28,6 @@ namespace FuzzPhyte.Connections
         public UnityEvent OnTriggerEnterValid;
         public UnityEvent OnTriggerExitValid;
         public UnityEvent OnTriggerStayValid;
-        
         
         public void OnTriggerEnter(Collider other)
         {

@@ -1,12 +1,15 @@
 {
-    "name": "com.fuzzphyte.connections",
-    "rootNamespace": "FuzzPhyte.Connections",
+    "name": "com.fuzzphyte.tools.connections.editor",
+    "rootNamespace": "FuzzPhyte.Tools.Connections.Editor",
     "references": [
-        "Unity.Mathematics",
         "com.fuzzphyte.utility",
-        "com.fuzzphyte.tools"
+        "com.fuzzphyte.utility.editor",
+        "Unity.Mathematics",
+        "com.fuzzphyte.tools.connections"
     ],
-    "includePlatforms": [],
+    "includePlatforms": [
+        "Editor"
+    ],
     "excludePlatforms": [],
     "allowUnsafeCode": true,
     "overrideReferences": false,

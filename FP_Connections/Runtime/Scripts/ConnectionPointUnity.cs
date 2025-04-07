@@ -1,23 +1,23 @@
-namespace FuzzPhyte.Connections
+namespace FuzzPhyte.Tools.Connections
 {
-    using System.Collections;
     using System.Collections.Generic;
-    using UnityEditor;
     using UnityEngine;
-    using UnityEngine.UIElements;
     using FuzzPhyte.Utility;
+
     public enum ConnectionPointStatus
     {
         None,
         Aligned,
         Connected,
     }
-    [ExecuteInEditMode]
     public class ConnectionPointUnity : MonoBehaviour
     {
-        public ConnectableItem TheConnectItem;
-        public ConnectionPointData ConnectionPointData;
-        
+        protected ConnectableItem theConnectItem;
+        public ConnectableItem TheConnectItem { get { return theConnectItem; } }
+        protected ConnectionPointData connectionPointData;
+        public ConnectionPointData ConnectionPointData { get { return connectionPointData; } }
+        public ConnectionToolTrigger MyToolTriggerRef;
+        public BoxCollider CPUTriggerCollider;
         public ConnectionPointStatus ConnectionPointStatusPt = ConnectionPointStatus.None;
         [Space]
         [SerializeField]
@@ -37,40 +37,72 @@ namespace FuzzPhyte.Connections
         [Header("Gizmo Related")]
         [Range(0.01f, 1f)]
         public float PercentageOfMeasure = 0.2f;
-        
-        private void OnEnable()
+        [SerializeField]protected bool setupFinished;
+
+        /// <summary>
+        /// We call this after we've made sure to have the ConnectionPointDataFile setup
+        /// </summary>
+        public void SetupDataFromDataFile(ConnectableItem theItem, ConnectionPointData theData)
         {
-            //connectionPoint = new ConnectionPoint(this.transform, connectionPointData,Tolerance,MarginOfErrror);
-            validRotations = new List<Quaternion>();
-            if (ConnectionPointData != null) 
+            theConnectItem = theItem;
+            connectionPointData = theData;
+            
+            if (connectionPointData != null)
             {
-                foreach (var angle in ConnectionPointData.localRotationAngles)
+                //move to my position
+                this.transform.localPosition = connectionPointData.LocalRelativePivotPosition;
+                validRotations = new List<Quaternion>();
+                foreach (var angle in connectionPointData.localRotationAngles)
                 {
                     Quaternion rotation = Quaternion.Euler(angle);
                     validRotations.Add(rotation);
                 }
                 connectorLocations = new List<Vector3>();
-                foreach (var connector in ConnectionPointData.localConnectors)
+                foreach (var connector in connectionPointData.localConnectors)
                 {
                     connectorLocations.Add(connector);
                 }
+                AngleTolerance = connectionPointData.AngleTolerance;
+                InitialAlignmentTolerance = connectionPointData.InitAlignmentTolerance;
+                PercentageOfMeasure = connectionPointData.PercentOfMeasure;
+                //setup box trigger
+                if (CPUTriggerCollider)
+                {
+                    CPUTriggerCollider.center = connectionPointData.TriggerCenter;
+                    CPUTriggerCollider.size = connectionPointData.TriggerSize;
+                    CPUTriggerCollider.isTrigger = true;
+                    CPUTriggerCollider.enabled = true;
+                }
+                if (MyToolTriggerRef)
+                {
+                    MyToolTriggerRef.TagToCompare = connectionPointData.TriggerTagCompare;
+                    MyToolTriggerRef.MyPoint = this;
+                }
+                SetupCPUData();
             }
-            
         }
-        private void OnDrawGizmos()
+        protected void SetupCPUData()
         {
-            if (ConnectionPointData != null)
+            setupFinished = true;
+        }
+        public void UpdateConnectableItem(ConnectableItem theItem)
+        {
+            theConnectItem = theItem;
+        }
+        protected void OnDrawGizmos()
+        {
+            if (connectionPointData != null&& setupFinished)
             {
-                var items = FP_UtilityData.ReturnValueInMeters(ConnectionPointData.width, ConnectionPointData.ConnectionUnitOfMeasure);
+                var items = FP_UtilityData.ReturnValueInMeters(connectionPointData.width, connectionPointData.ConnectionUnitOfMeasure);
                 // Draw the local forward direction
                 Gizmos.color = Color.magenta;
                 if (items.Item1)
                 {
-                    Gizmos.DrawLine(transform.position, transform.position + transform.TransformDirection(ConnectionPointData.localForward) * items.Item2*3f);
+                    Gizmos.DrawLine(transform.position, transform.position + transform.TransformDirection(connectionPointData.localForward) * items.Item2*3f);
                 }
                 else 
                 {
-                    Gizmos.DrawLine(transform.position, transform.position + transform.TransformDirection(ConnectionPointData.localForward) * 0.25f);
+                    Gizmos.DrawLine(transform.position, transform.position + transform.TransformDirection(connectionPointData.localForward) * 0.25f);
                 }
                    
                 
@@ -94,16 +126,16 @@ namespace FuzzPhyte.Connections
                 }
                 else
                 {
-                    Gizmos.DrawSphere(transform.position, ConnectionPointData.width * 0.01f);
+                    Gizmos.DrawSphere(transform.position, connectionPointData.width * 0.01f);
                 }
 
                     // Optional: Label the connection point in the scene view
                     // UnityEditor.Handles.Label(transform.position, connectionPointData.name);
                     // Draw valid rotations relative to localForward
-                    foreach (var angle in ConnectionPointData.localRotationAngles)
+                    foreach (var angle in connectionPointData.localRotationAngles)
                     {
                         Quaternion rotation = Quaternion.Euler(angle);
-                        Vector3 direction = rotation * ConnectionPointData.localForward;
+                        Vector3 direction = rotation * connectionPointData.localForward;
                         Gizmos.color = Color.yellow;
                         Gizmos.DrawLine(transform.position, transform.position + transform.TransformDirection(direction) * 0.1f);
                         //Gizmos.DrawRay(transform.position, direction.normalized * 0.1f);
@@ -112,7 +144,7 @@ namespace FuzzPhyte.Connections
                 Gizmos.color = Color.yellow;
                 foreach (var connector in connectorLocations)
                 {
-                    var connectorConversion = FP_UtilityData.ReturnVector3InMeters(connector, ConnectionPointData.ConnectionUnitOfMeasure);
+                    var connectorConversion = FP_UtilityData.ReturnVector3InMeters(connector, connectionPointData.ConnectionUnitOfMeasure);
                     if (items.Item1)
                     {
                         //convert connector into meters from units
@@ -165,27 +197,27 @@ namespace FuzzPhyte.Connections
             Vector3 theOtherDataRotation = Vector3.zero;
             // Calculate the angle difference between the two forward vectors
 
-            Vector3 myActualForward = this.transform.TransformDirection(ConnectionPointData.localForward);
-            Vector3 theOtherForward = other.transform.TransformDirection(-other.ConnectionPointData.localForward); //inverse this forward to compare it to mine or minus 180 from answer
+            Vector3 myActualForward = this.transform.TransformDirection(connectionPointData.localForward);
+            Vector3 theOtherForward = other.transform.TransformDirection(-other.connectionPointData.localForward); //inverse this forward to compare it to mine or minus 180 from answer
             float angleDifference = Vector3.Angle(myActualForward, theOtherForward);
             //Debug.Log($"Angle Difference between {this.name} and {other.name} = {angleDifference}");
             if(angleDifference< InitialAlignmentTolerance)
             {
-                for(int i = 0; i < ConnectionPointData.localRotationAngles.Count; i++)
+                for(int i = 0; i < connectionPointData.localRotationAngles.Count; i++)
                 {
-                    var myRotation = ConnectionPointData.localRotationAngles[i];
+                    var myRotation = connectionPointData.localRotationAngles[i];
                     Quaternion myTargetRotation = Quaternion.Euler(myRotation) * this.transform.rotation;
-                    Vector3 myForward = myTargetRotation * ConnectionPointData.localForward;
+                    Vector3 myForward = myTargetRotation * connectionPointData.localForward;
                     
-                    for(int j = 0; j < other.ConnectionPointData.localRotationAngles.Count; j++)
+                    for(int j = 0; j < other.connectionPointData.localRotationAngles.Count; j++)
                     {
-                        var otherRotation = other.ConnectionPointData.localRotationAngles[j];
+                        var otherRotation = other.connectionPointData.localRotationAngles[j];
                         //JOHN Cross of my Cross
-                        var curForwardWorld = this.transform.TransformDirection(ConnectionPointData.localForward);
+                        var curForwardWorld = this.transform.TransformDirection(connectionPointData.localForward);
                         var curDirRotAngle = this.transform.TransformDirection(myRotation);
                         var curCross = Vector3.Cross(curForwardWorld, curDirRotAngle);
                         //
-                        var otherForwardWorld = other.transform.TransformDirection(other.ConnectionPointData.localForward);
+                        var otherForwardWorld = other.transform.TransformDirection(other.connectionPointData.localForward);
                         var otherDirRotAngle = other.transform.TransformDirection(otherRotation);
                         var otherCross = Vector3.Cross(otherForwardWorld, otherDirRotAngle);
                         //compare the cross of the cross
@@ -197,7 +229,7 @@ namespace FuzzPhyte.Connections
                         if (techAngle < AngleTolerance)
                         {
                             //we are parallel enough to consider a match
-                            Vector3 otherForward = (Quaternion.Euler(otherRotation) * other.transform.rotation) * other.ConnectionPointData.localForward;
+                            Vector3 otherForward = (Quaternion.Euler(otherRotation) * other.transform.rotation) * other.connectionPointData.localForward;
                             // Calculate the cross product for the rotation axis
                             Vector3 axis = Vector3.Cross(myForward, otherForward).normalized;
                             
@@ -252,8 +284,7 @@ namespace FuzzPhyte.Connections
                 otherAlignedPoint = null;
             }
             ConnectionPointStatusPt = ConnectionPointStatus.None;
-        }
-        
+        }      
         public void AddConnectionPoint(ConnectionPointUnity connectionPointUnity)
         {
             if (otherConnection != null)

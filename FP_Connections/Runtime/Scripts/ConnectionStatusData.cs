@@ -1,9 +1,9 @@
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-
-namespace FuzzPhyte.Connections
+namespace FuzzPhyte.Tools.Connections
 {
+    using System.Collections;
+    using System.Collections.Generic;
+    using UnityEngine;
+
     /// <summary>
     /// Manage connection status data
     /// </summary>

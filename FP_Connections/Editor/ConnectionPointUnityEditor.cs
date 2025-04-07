@@ -1,12 +1,12 @@
-using UnityEditor;
-using UnityEngine;
-
-namespace FuzzPhyte.Connections
+namespace FuzzPhyte.Tools.Connections.Editor
 {
+    using UnityEditor;
+    using UnityEngine;
+
     [CustomEditor(typeof(ConnectionPointUnity))]
-    public class ConnectionPointUnityEditor : Editor
+    public class ConnectionPointUnityEditor : UnityEditor.Editor
     {
-        private void OnSceneGUI()
+        protected void OnSceneGUI()
         {
             // Get the target object
             ConnectionPointUnity connectionPoint = (ConnectionPointUnity)target;

@@ -1,10 +1,12 @@
-namespace FuzzPhyte.Connections
+namespace FuzzPhyte.Tools.Connections
 {
     using System;
-    using System.Collections;
     using System.Collections.Generic;
     using UnityEngine;
 
+    /// <summary>
+    /// Class to hold data for my ConnectableItem.cs Mono
+    /// </summary>
     [Serializable]
     public class ConnectableData 
     {

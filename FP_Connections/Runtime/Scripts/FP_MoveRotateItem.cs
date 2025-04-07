@@ -1,10 +1,9 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-
-namespace FuzzPhyte.ThreeD
+namespace FuzzPhyte.Tools.Connections
 {
+    using System;
+    using System.Collections;
+    using System.Collections.Generic;
+    using UnityEngine;
     /*
      * private void AlignmentCheck()
         {
@@ -209,7 +208,7 @@ namespace FuzzPhyte.ThreeD
         }
 
         #endregion
-        private float TrySnapMovement(float delta, float snapValue)
+        protected float TrySnapMovement(float delta, float snapValue)
         {
             if (Mathf.Abs(delta) >= snapValue)
             {
@@ -219,7 +218,7 @@ namespace FuzzPhyte.ThreeD
         }
         
 
-        private Quaternion ApplyRotationSnappingAndRestrictions(Quaternion deltaRotation, Quaternion baseRotation)
+        protected Quaternion ApplyRotationSnappingAndRestrictions(Quaternion deltaRotation, Quaternion baseRotation)
         {
             Vector3 deltaEuler = deltaRotation.eulerAngles;
 
@@ -238,7 +237,7 @@ namespace FuzzPhyte.ThreeD
             return Quaternion.Euler(baseEuler + deltaEuler);
         }
 
-        private float TrySnapRotation(float delta, float snapValue)
+        protected float TrySnapRotation(float delta, float snapValue)
         {
             // Ensure delta is within 0-360 range
             delta = NormalizeAngle(delta);
@@ -250,7 +249,7 @@ namespace FuzzPhyte.ThreeD
             return 0;
         }
 
-        private float NormalizeAngle(float angle)
+        protected float NormalizeAngle(float angle)
         {
             while (angle > 360) angle -= 360;
             while (angle < 0) angle += 360;
