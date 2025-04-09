@@ -50,6 +50,7 @@ namespace FuzzPhyte.Tools.Samples
             {
                 Destroy(line.gameObject);
             }
+            allMeasuredLines.Clear();
         }
         public void DeactivateToolFromUI()
         {
@@ -118,7 +119,7 @@ namespace FuzzPhyte.Tools.Samples
             {
                 
                 //it's me
-                Debug.LogWarning($"Event Data Target Object is me {eventData.TargetObject} {this}");
+                //Debug.LogWarning($"Event Data Target Object is me {eventData.TargetObject} {this}");
                 switch (eventData.EventType)
                 {
                     case FP_UIEventType.PointerDown:
@@ -248,6 +249,13 @@ namespace FuzzPhyte.Tools.Samples
             }
         }
         
+        /// <summary>
+        /// Reset whatever we need on this tool
+        /// </summary>
+        public void ResetVisuals()
+        {
+            DeactivateResetLinesUI();
+        }
         /// <summary>
         /// Returns a screen position coordinate based on the canvas already assigned in the inspector
         /// </summary>

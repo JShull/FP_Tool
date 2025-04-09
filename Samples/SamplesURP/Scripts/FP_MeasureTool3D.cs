@@ -236,6 +236,16 @@ namespace FuzzPhyte.Tools.Samples
                 }
             }
         }
+        public void ResetVisuals()
+        {
+            ForceDeactivateTool();
+            //blast all the lines
+            foreach (var line in allMeasuredLines)
+            {
+                Destroy(line.gameObject);
+            }
+            allMeasuredLines.Clear();
+        }
         protected void UpdateMeasurementText()
         {
             float distance = Vector3.Distance(startPosition, endPosition);

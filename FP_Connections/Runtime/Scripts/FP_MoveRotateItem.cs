@@ -1,9 +1,8 @@
 namespace FuzzPhyte.Tools.Connections
 {
     using System;
-    using System.Collections;
-    using System.Collections.Generic;
     using UnityEngine;
+    using UnityEngine.Events;
     /*
      * private void AlignmentCheck()
         {
@@ -49,21 +48,26 @@ namespace FuzzPhyte.Tools.Connections
 
         private Vector3 accumulatedDelta = Vector3.zero;
         private Quaternion accumulatedRotation = Quaternion.identity;
+        public UnityEvent MoveStartedEvent;
+        public UnityEvent MoveEndedEvent;
+        [Tooltip("Overall Start Interaction Pinged")]
         public event Action<GameObject> OnMoveStartedEvent;
+        [Tooltip("Overall End Interaction Pinged")]
         public event Action<GameObject> OnMoveEndEvent;
+        //every end of the loop we call this
         public event Action<GameObject> OnRotationEndEvent;
 
         public void OnEnable()
         {
-            OnMoveEndEvent = new Action<GameObject>((gameObject) => { });
-            OnMoveStartedEvent = new Action<GameObject>((gameObject) => { });
-            OnRotationEndEvent = new Action<GameObject>((gameObject) => { });
+            OnMoveEndEvent = new Action<GameObject>((gameObject) => { MoveEndedEvent.Invoke(); });
+            OnMoveStartedEvent = new Action<GameObject>((gameObject) => { MoveStartedEvent.Invoke(); });
+            OnRotationEndEvent = new Action<GameObject>((gameObject) => {  });
         }
-        public void MoveStarted()
+        public void InteractionStarted()
         {
             OnMoveStartedEvent.Invoke(this.gameObject);
         }
-        public void MoveEnd()
+        public void InteractionEnded()
         {
             OnMoveEndEvent.Invoke(this.gameObject);
         }
@@ -75,12 +79,12 @@ namespace FuzzPhyte.Tools.Connections
         /// Returns a world coordinate location
         /// </summary>
         /// <param name="passedLocation">world coordinates</param>
-        public Vector3 MoveItem(Vector3 passedLocation)
+        public (bool,Vector3) MoveItem(Vector3 passedLocation)
         {
             if (!UseMovementSnap)
             {
                 //we aren't using our movement snap just return the location we were passed
-                return passedLocation;
+                return (false,passedLocation);
             }
             Vector3 currentPosition = this.transform.position;
             Vector3 deltaPosition = passedLocation - currentPosition;
@@ -102,7 +106,7 @@ namespace FuzzPhyte.Tools.Connections
             Vector3 returnLocation = currentPosition + accumulatedDelta;
             accumulatedDelta = Vector3.zero; // Reset accumulated delta
 
-            return returnLocation;
+            return (true,returnLocation);
         }
 
         /// <summary>
@@ -110,7 +114,7 @@ namespace FuzzPhyte.Tools.Connections
         /// </summary>
         /// <param name="passedEulerRotation"></param>
         /// <returns></returns>
-        public Quaternion RotateItem(Vector3 passedEulerRotation)
+        public (bool,Quaternion) RotateItem(Vector3 passedEulerRotation)
         {
             Quaternion targetRotation = Quaternion.Euler(passedEulerRotation);
             Quaternion currentRotation = transform.rotation;
@@ -131,13 +135,37 @@ namespace FuzzPhyte.Tools.Connections
                 Debug.Log($"Rotation Snap");
                 Quaternion snappedAndRestrictedRotation = ApplyRotationSnappingAndRestrictions(accumulatedRotation, currentRotation);
                 accumulatedRotation = Quaternion.identity; // Reset only after snapping
-                return snappedAndRestrictedRotation;
+                OnRotationEndEvent.Invoke(this.gameObject);
+                return (true,snappedAndRestrictedRotation);
             }
 
             // If not yet meeting the snap criteria, return the current rotation
             OnRotationEndEvent.Invoke(this.gameObject);
             Debug.Log($"{gameObject.name}: Rotating!");
-            return currentRotation;
+            return (false,currentRotation);
+        }
+        /// <summary>
+        /// Returns a normalized vector from the object to the mouse, projected onto a rotation plane.
+        /// </summary>
+        public Vector3 GetProjectedMouseDirection(Vector3 rotationAxis,Camera cam, Vector2 screenPosMouse)
+        {
+            Plane rotationPlane = new Plane(rotationAxis, this.transform.position);
+            Ray mouseRay = cam.ScreenPointToRay(screenPosMouse);
+
+            if (rotationPlane.Raycast(mouseRay, out float enter))
+            {
+                Vector3 hitPoint = mouseRay.GetPoint(enter);
+                Vector3 toMouse = hitPoint - this.transform.position;
+
+                return Vector3.ProjectOnPlane(toMouse, rotationAxis).normalized;
+            }
+
+            return Vector3.zero;
+        }
+        public (bool,Vector3) RotateItemVector(Vector3 passedMouseDelta, float rotationSpeed,float timeStamp)
+        {
+            Vector3 rotationVector = new Vector3(0, passedMouseDelta.y, -passedMouseDelta.x) * rotationSpeed * timeStamp;
+            return (false, rotationVector);
         }
         /// <summary>
         /// public accessor to just rotate the item by the local values

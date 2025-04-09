@@ -279,7 +279,11 @@ namespace FuzzPhyte.Tools.Connections
             {
                 if (updatePair)
                 {
-                    otherConnection.RemoveAlignmentPoint(this, false);
+                    if (otherConnection != null)
+                    {
+                        otherConnection.RemoveAlignmentPoint(this, false);
+                    }
+                    
                 }
                 otherAlignedPoint = null;
             }

@@ -246,6 +246,10 @@ namespace FuzzPhyte.Tools.Connections
                 //Debug.Log($"{this.gameObject.name}: ConnectionPart.cs Pointer DRAG");
             }
         }
+        public void ResetVisuals()
+        {
+            //do nothing
+        }
         #endregion
         #region Delegate stuff
         #region Callbacks
