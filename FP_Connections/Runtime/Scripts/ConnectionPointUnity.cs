@@ -12,8 +12,8 @@ namespace FuzzPhyte.Tools.Connections
     }
     public class ConnectionPointUnity : MonoBehaviour
     {
-        protected ConnectableItem theConnectItem;
-        public ConnectableItem TheConnectItem { get { return theConnectItem; } }
+        protected ConnectionPart theConnectionPart;
+        public ConnectionPart TheConnectionPart { get { return theConnectionPart; } }
         protected ConnectionPointData connectionPointData;
         public ConnectionPointData ConnectionPointData { get { return connectionPointData; } }
         public ConnectionToolTrigger MyToolTriggerRef;
@@ -42,9 +42,9 @@ namespace FuzzPhyte.Tools.Connections
         /// <summary>
         /// We call this after we've made sure to have the ConnectionPointDataFile setup
         /// </summary>
-        public void SetupDataFromDataFile(ConnectableItem theItem, ConnectionPointData theData)
+        public void SetupDataFromDataFile(ConnectionPart thePart,ConnectionPointData theData)
         {
-            theConnectItem = theItem;
+            theConnectionPart = thePart;
             connectionPointData = theData;
             
             if (connectionPointData != null)
@@ -85,9 +85,9 @@ namespace FuzzPhyte.Tools.Connections
         {
             setupFinished = true;
         }
-        public void UpdateConnectableItem(ConnectableItem theItem)
+        public void UpdateConnectableItem(ConnectionPart thePart)
         {
-            theConnectItem = theItem;
+            theConnectionPart = thePart;
         }
         protected void OnDrawGizmos()
         {

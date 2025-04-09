@@ -14,25 +14,26 @@ namespace FuzzPhyte.Tools.Connections
     /// </summary>
     public class ConnectionPart : FP_Tool<PartData>, IFPUIEventListener<FP_Tool<PartData>>
     {
-        [Header("Pipe Related")]
-        public ConnectableItem TheItem;
+        [Header("Part Related")]
+        //public ConnectableItem TheItem;
         public GameObject FixedAttachedPrefab;
         public Transform FixedAttachedParent;
         public Transform ConnectionPtParent;
+        [SerializeField]
+        protected int UniqueIndexPos;
+        public int GetUniqueIndexPos { get { return UniqueIndexPos; } }
         [Space]
         [Header("Unity Events")]
         public UnityEvent OnAlignmentSuccessEvent;
         public UnityEvent OnTriggerEnterUnityEvent;
         public UnityEvent OnTriggerExitUnityEvent;
-        
-        //data
         public List<ConnectionToolTrigger> ConnectionPointTriggersListeners = new List<ConnectionToolTrigger>();
         public Dictionary<ConnectionPointUnity, ConnectionToolTrigger> ConnectionPointsTriggersLookUp = new Dictionary<ConnectionPointUnity, ConnectionToolTrigger>();
         [SerializeField]
         [Tooltip("Hold a list of bolts by ConnectionPointUnity")]
         protected Dictionary<ConnectionPointUnity, List<ConnectionFixed>> WeldsByPoint = new Dictionary<ConnectionPointUnity, List<ConnectionFixed>>();
         [Tooltip("Hold a Connectable Item by a Point")]
-        protected Dictionary<ConnectionPointUnity, ConnectableItem> PossibleTargetByPoint = new Dictionary<ConnectionPointUnity, ConnectableItem>();
+        protected Dictionary<ConnectionPointUnity, ConnectionPart> PossibleTargetByPoint = new Dictionary<ConnectionPointUnity, ConnectionPart>();
         [Tooltip("Match the ConnectionPointUnity with the Target ConnectionPointUnity")]
         protected Dictionary<ConnectionPointUnity, ConnectionPointUnity> AlignmentConnectionPointPair = new Dictionary<ConnectionPointUnity, ConnectionPointUnity>();
         public virtual void Awake()
@@ -50,7 +51,7 @@ namespace FuzzPhyte.Tools.Connections
                 if(cpu != null)
                 {
                     prefabSpawned.gameObject.name = curPointData.connectionType.ToString()+"_"+i;
-                    cpu.SetupDataFromDataFile(TheItem, curPointData);
+                    cpu.SetupDataFromDataFile(this, curPointData);
                     cpu.ConnectionPointStatusPt = ConnectionPointStatus.None;
                     if (cpu.MyToolTriggerRef != null)
                     {
@@ -70,44 +71,48 @@ namespace FuzzPhyte.Tools.Connections
 
             }
             
-            TheItem.SetupConnectionPart(toolData.UniquePartID, cachedPoints);
+            myConnectionPoints.Clear();
+            InternalAvailableConnections.Clear();
+            MyConnectionPoints.AddRange(cachedPoints);
+            InternalAvailableConnections.AddRange(myConnectionPoints);
+            //SetupData(toolData.UniquePartID);
+            UniqueIndexPos = toolData.UniquePartID;
+            List<Vector3> localConnectionPoints = new List<Vector3>();
+            for(int i=0;i < myConnectionPoints.Count; i++)
+            {
+                localConnectionPoints.Add(myConnectionPoints[i].transform.localPosition);
+            }
+            LookupPreviousParts.Add
+            (
+                UniqueIndexPos,
+                new ConnectableData(
+                    RootConnectableItemRef, 
+                    UniqueIndexPos, 
+                    Vector3.zero,
+                    localConnectionPoints,
+                    ConnectionDistanceMax
+                    )
+            );
         }
-        
         public virtual void OnEnable()
         {
-            TheItem.OnAlignmentFail += OnPartAlignmentFail;
-            TheItem.OnAlignmentSuccess += OnPartAlignmentMade;
-            TheItem.OnConnectionSuccess += OnPartConnectionMade;
-            TheItem.OnConnectionRemoved += OnPartDisconnect;
-            TheItem.OnConnectionFail += OnPartConnectionFail;
-
             foreach (var cp in ConnectionPointTriggersListeners)
             {
                 cp.OnPartTriggerEnterAction += OnConnectionPointTriggerEnter;
                 cp.OnPartTriggerExitAction += OnConnectionPointTriggerExit;
-                cp.gameObject.name = $"{TheItem.GetUniqueIndexPos}_{cp.gameObject.name}";
+                cp.gameObject.name = $"{GetUniqueIndexPos}_{cp.gameObject.name}";
             }
         }
         public virtual void OnDisable()
         {
-            TheItem.OnAlignmentFail -= OnPartAlignmentFail;
-            TheItem.OnAlignmentSuccess -= OnPartAlignmentMade;
-            TheItem.OnConnectionSuccess -= OnPartConnectionMade;
-            TheItem.OnConnectionRemoved -= OnPartDisconnect;
-            TheItem.OnConnectionFail -= OnPartConnectionFail;
             foreach (var cp in ConnectionPointTriggersListeners)
             {
                 cp.OnPartTriggerEnterAction -= OnConnectionPointTriggerEnter;
                 cp.OnPartTriggerExitAction -= OnConnectionPointTriggerExit;
             }
         }
-        #region Listeners for External Pointers/Events
-
-
-
-
-        #endregion
-        #region Interface Requirements for Input Information
+        
+        #region State Actions & OnUIEvent
         /// <summary>
         /// This just sets our state up for being ready to use the tool
         /// </summary>
@@ -178,7 +183,7 @@ namespace FuzzPhyte.Tools.Connections
             // loop through our dictionary of possible targets
             Debug.Log($"{this.gameObject.name}: ConnectionPart.cs Pointer UP");
             var possibleTargets = PossibleTargetByPoint.Keys.ToList();
-            List<ConnectableItem> allPossibleTargets = new List<ConnectableItem>();
+            List<ConnectionPart> allPossibleTargets = new List<ConnectionPart>();
             for (int i = 0; i < possibleTargets.Count; i++)
             {
                 var aConnectionPoint = possibleTargets[i];
@@ -203,8 +208,8 @@ namespace FuzzPhyte.Tools.Connections
                     {
                         //build up all possible points based on current connection points and connected items
                         //var allOpenPossiblePoints = ThePipe.GetOpenConnectionPoints();
-
-                        var greatSuccess = TheItem.TryAlignmentOnRelease(theTarget);
+                         
+                        var greatSuccess = TryAlignmentOnRelease(theTarget, InternalAvailableConnections);
                         if (greatSuccess)
                         {
                             Debug.LogWarning($"Pipe Grab Alignment worked!");
@@ -233,102 +238,14 @@ namespace FuzzPhyte.Tools.Connections
         }
         #endregion
         #region Delegate stuff
-        #region Callbacks for ConnectableItem
-        private void OnPartConnectionMade(ConnectableItem item, ConnectionPointUnity connectionPoint, ConnectableItem targetItem, ConnectionPointUnity targetPoint)
-        {
-            //turn off the associated triggers for those endpoints
-            Debug.LogWarning($"{this.gameObject.name} from OVRPipePart.cs got the call back for connection made=> {item.gameObject.name} with {targetItem.gameObject.name} was connected!");
-            //turn off 
-            if (ConnectionPointsTriggersLookUp.ContainsKey(connectionPoint))
-            {
-                ConnectionPointsTriggersLookUp[connectionPoint].SetActiveTrigger(false);
-                // reset the possible target since we are now connected //remove from dictionary
-                if (PossibleTargetByPoint.ContainsKey(connectionPoint))
-                {
-                    PossibleTargetByPoint.Remove(connectionPoint);
-                }
-                if (AlignmentConnectionPointPair.ContainsKey(connectionPoint))
-                {
-                    AlignmentConnectionPointPair.Remove(connectionPoint);
-                }
-                //possibleTarget = null;
-            }
-            if (targetItem.GetComponent<ConnectionPart>() != null)
-            {
-                var targetPipePart = targetItem.GetComponent<ConnectionPart>();
-                // deactivate target point trigger object
-                targetPipePart.OnPipeConnectionRequest(this, item, connectionPoint, targetPoint);
-            }
-        }
-        private void OnPartConnectionFail(ConnectableItem item, ConnectionPointUnity connetionPoint, ConnectableItem targetItem, ConnectionPointUnity targetPoint)
-        {
-            Debug.LogWarning($"{this.gameObject.name} got the call back for connection failed=> {item.gameObject.name} with {targetItem.gameObject.name} was not connected!");
-        }
-        private void OnPartDisconnect(ConnectableItem item, ConnectionPointUnity connectionPoint, ConnectableItem targetItem, ConnectionPointUnity targetPoint)
+        #region Callbacks
+        
+       
+        private void OnPartDisconnect(ConnectionPart item, ConnectionPointUnity connectionPoint, ConnectionPart targetItem, ConnectionPointUnity targetPoint)
         {
             //turn on the associated triggers for those endpoints
         }
-        private void OnPartAlignmentFail(ConnectableItem item, ConnectionPointUnity connectionPoint, ConnectableItem targetItem, ConnectionPointUnity targetPoint)
-        {
-            Debug.LogError($"Alignment failed... {item.gameObject.name} and {targetItem.gameObject.name}");
-        }
-        private void OnPartAlignmentMade(ConnectableItem item, ConnectionPointUnity connectionPoint, ConnectableItem targetItem, ConnectionPointUnity targetPoint)
-        {
-            Debug.LogWarning($"Alignment Made: {item.gameObject.name} and {targetItem.gameObject.name}");
-
-            //spawn my bolts based on the number of ConnectionPointData within - this will eventually be "Welds"
-            /*
-            if (FixedAttachedPrefab != null)
-            {
-                List<ConnectionFixed> bolts = new List<ConnectionFixed>();
-                for (int i = 0; i < connectionPoint.ConnectionPointData.localConnectors.Count; i++)
-                {
-                    var connectorBoltlocalPos = connectionPoint.ConnectionPointData.localConnectors[i];
-                    var pos = connectionPoint.transform.TransformPoint(connectorBoltlocalPos);
-                    var fixedPT = Instantiate(FixedAttachedPrefab, Vector3.zero, Quaternion.identity);
-                    //bolt.transform.SetParent(BoltParent);
-                    fixedPT.transform.position = pos;
-                    var boltForwardShouldBe = connectionPoint.transform.TransformDirection(connectionPoint.ConnectionPointData.localForward);
-                    // make the bolt face that forward vector
-                    fixedPT.transform.rotation = Quaternion.LookRotation(boltForwardShouldBe);
-                    fixedPT.transform.SetParent(FixedAttachedParent);
-                    fixedPT.name = $"{i.ToString()}_{connectionPoint.gameObject.name}_bolt";
-                    fixedPT.GetComponent<ConnectionFixed>().FixedAssociatedConnectionPoint = connectionPoint;
-                    fixedPT.GetComponent<ConnectionFixed>().OnPartConnectionFixedToolFinished += OnFixedWeldedToolEnd;
-
-                    bolts.Add(fixedPT.GetComponent<ConnectionFixed>());
-                    //register for bolted events
-                }
-                //setup and confirm dictionary
-                if (WeldsByPoint.ContainsKey(connectionPoint))
-                {
-                    WeldsByPoint[connectionPoint] = bolts;
-                }
-                else
-                {
-                    WeldsByPoint.Add(connectionPoint, bolts);
-                }
-                // setup AlignmentConnectionPointPair
-                if (AlignmentConnectionPointPair.ContainsKey(connectionPoint))
-                {
-                    AlignmentConnectionPointPair[connectionPoint] = targetPoint;
-                }
-                else
-                {
-                    AlignmentConnectionPointPair.Add(connectionPoint, targetPoint);
-                }
-            }
-            */
-            if (AlignmentConnectionPointPair.ContainsKey(connectionPoint))
-            {
-                AlignmentConnectionPointPair[connectionPoint] = targetPoint;
-            }
-            else
-            {
-                AlignmentConnectionPointPair.Add(connectionPoint, targetPoint);
-            }
-            OnAlignmentSuccessEvent.Invoke();
-        }
+        
         
         private void ResetDestroyBoltsAfterMoving(ConnectionPointUnity connectionPt)
         {
@@ -396,7 +313,7 @@ namespace FuzzPhyte.Tools.Connections
                         //ThePipe.IsPartiallyConnected = true;
                         thePossibleTarget.IsPartiallyConnected = true;
                         // very important IsPartiallyConnected will make sure we only run this code once
-                        TheItem.TryToMakeAconnection(thePossibleTarget, thePossibleConnection, ptData);
+                        TryToMakeAconnection(thePossibleTarget, thePossibleConnection, ptData);
                     }
                     if (fixedWelds >= boltsByConnectionPoint.Count)
                     {
@@ -414,7 +331,7 @@ namespace FuzzPhyte.Tools.Connections
         /// Called from the other end - syncing the trigger states for turning them off/on
         /// </summary>
         /// <param name="thePointToCheck"></param>
-        public void OnPipeConnectionRequest(ConnectionPart otherPart, ConnectableItem theItemToCheck, ConnectionPointUnity thePointToCheck, ConnectionPointUnity myPointTrigger)
+        public void OnPipeConnectionRequest(ConnectionPart otherPart, ConnectionPart theItemToCheck, ConnectionPointUnity thePointToCheck, ConnectionPointUnity myPointTrigger)
         {
             GameObject cPGameObject = null;
             var nameOfOtherPart = otherPart.gameObject.name;
@@ -433,7 +350,7 @@ namespace FuzzPhyte.Tools.Connections
                 Debug.LogWarning($"Turned off the trigger on {cPGameObject.name}!");
             }
             // copy data first
-            TheItem.CopyIncomingData(theItemToCheck, thePointToCheck, myPointTrigger);
+            CopyIncomingData(theItemToCheck, thePointToCheck, myPointTrigger);
 
             // clean up
             // remove all listeners?
@@ -476,20 +393,20 @@ namespace FuzzPhyte.Tools.Connections
             }
             
             // clean up internal connection list InternalAvailableConnections and drop myPointTrigger
-            if (TheItem.InternalAvailableConnections.Contains(myPointTrigger))
+            if (InternalAvailableConnections.Contains(myPointTrigger))
             {
-                TheItem.InternalAvailableConnections.Remove(myPointTrigger);
+                InternalAvailableConnections.Remove(myPointTrigger);
                 myPointTrigger.GetComponent<ConnectionToolTrigger>().SetActiveTrigger(false);
             }
-            if (TheItem.InternalAvailableConnections.Contains(thePointToCheck))
+            if (InternalAvailableConnections.Contains(thePointToCheck))
             {
-                TheItem.InternalAvailableConnections.Remove(thePointToCheck);
+                InternalAvailableConnections.Remove(thePointToCheck);
                 thePointToCheck.GetComponent<ConnectionToolTrigger>().SetActiveTrigger(false);
             }
             // re-add our triggers based on the updated data from ThePipe
-            for (int i = 0; i < TheItem.MyConnectionPoints.Count; i++)
+            for (int i = 0; i < MyConnectionPoints.Count; i++)
             {
-                var aPoint = TheItem.MyConnectionPoints[i];
+                var aPoint = MyConnectionPoints[i];
                 Debug.LogWarning($"Readding Triggers: {aPoint.gameObject.name}");
                 if (aPoint.gameObject.GetComponent<ConnectionToolTrigger>() != null)
                 {
@@ -501,7 +418,7 @@ namespace FuzzPhyte.Tools.Connections
                     cpTrigger.OnPartTriggerEnterAction += OnConnectionPointTriggerEnter;
                     cpTrigger.OnPartTriggerExitAction += OnConnectionPointTriggerExit;
 
-                    aPoint.UpdateConnectableItem(TheItem);
+                    aPoint.UpdateConnectableItem(this);
                     Debug.LogWarning($"Setting the connect item to {theItemToCheck.gameObject.name} on {aPoint.gameObject.name} and registered the trigger: {cpTrigger.gameObject.name}!");
                 }
                 else
@@ -525,22 +442,21 @@ namespace FuzzPhyte.Tools.Connections
             Destroy(theOBJToDestroy, Time.fixedDeltaTime);
         }
 
-
         #region Callbacks for Trigger Events Tied to ConnectionPointUnity
         protected void OnConnectionPointTriggerEnter(Collider item, ConnectionPointUnity myPoint, ConnectionPointUnity otherPoint)
         {
             Debug.LogWarning($"Callback--> Connection Point Trigger Enter: {item.gameObject.name} with {myPoint.gameObject.name}");
-            if (otherPoint.TheConnectItem != null)
+            if (otherPoint.TheConnectionPart != null)
             {
                 if (PossibleTargetByPoint.ContainsKey(myPoint))
                 {
-                    PossibleTargetByPoint[myPoint] = otherPoint.TheConnectItem;
+                    PossibleTargetByPoint[myPoint] = otherPoint.TheConnectionPart;
                 }
                 else
                 {
-                    PossibleTargetByPoint.Add(myPoint, otherPoint.TheConnectItem);
+                    PossibleTargetByPoint.Add(myPoint, otherPoint.TheConnectionPart);
                     OnTriggerEnterUnityEvent.Invoke();
-                    Debug.LogWarning($"This {this.gameObject.name} is adding Dictionary target point: {myPoint.gameObject.name} with {otherPoint.TheConnectItem.gameObject.name}");
+                    Debug.LogWarning($"This {this.gameObject.name} is adding Dictionary target point: {myPoint.gameObject.name} with {otherPoint.TheConnectionPart.gameObject.name}");
                 }
                 //sync with Alignment AlignmentConnectionPointPair
                 if (AlignmentConnectionPointPair.ContainsKey(myPoint))
@@ -581,7 +497,462 @@ namespace FuzzPhyte.Tools.Connections
                 }
             }
         }
+        #endregion
+        #endregion
+    
+        #region Connectable Item Moved over
+        
+        [Header("Parameters")]
+        public float ConnectionDistanceMax = 1.5f;
+        public Transform FakePivot;
+        //public Rigidbody MyRigidBody;
+        [Tooltip("Are we locked into a static situation")]
+        public bool ConnectedLockedInPlace { get { return connectedLockedInPlace; } }
+        [Tooltip("Are we locked into a static situation")]
+        [SerializeField]
+        protected bool connectedLockedInPlace;
+        [Space]
+        public bool IsPartiallyConnected = false;
+        [Space]
+        [SerializeField]
+        [Tooltip("Hold the connection pairs")]
+        public Dictionary<ConnectionPointUnity, ConnectionPart> ConnectionPairs = new Dictionary<ConnectionPointUnity, ConnectionPart>();
+        [Tooltip("If we end up connecting larger pieces")]
+        public Dictionary<ConnectionPointUnity, Joint> ConnectionJoints = new Dictionary<ConnectionPointUnity, Joint>();
 
+        
+        [Tooltip("All/any actual points open for a connection")]
+        public List<ConnectionPointUnity> InternalAvailableConnections = new List<ConnectionPointUnity>();
+        [Tooltip("The points that are directly attached to this item")]
+        [SerializeField]
+        protected List<ConnectionPointUnity> myConnectionPoints = new List<ConnectionPointUnity>();
+        public List<ConnectionPointUnity> MyConnectionPoints { get { return myConnectionPoints; } }
+        #region New Progress
+        [Space]
+        [Header("MOVED DATA")]
+        [Tooltip("This should be equal to myself")]
+        [SerializeField]protected GameObject RootConnectableItemRef;
+
+        [Space]
+        public Transform ColliderParent;
+        public Transform ConnectionPointParent;
+        public List<GameObject> MyBodyColliders = new List<GameObject>();
+
+        [Tooltip("Visual Item")]
+        public GameObject MyVisualItem;
+        
+        public Dictionary<int,ConnectableData> LookupPreviousParts = new Dictionary<int, ConnectableData>();
+        public Dictionary<int,List<GameObject>> LookupPreviousColliders = new Dictionary<int, List<GameObject>>();
+        public void CopyIncomingData(ConnectionPart incomingItem, ConnectionPointUnity incomingConnectionPt, ConnectionPointUnity myConnectionPoint)
+        {
+            // move the visuals to under my visual item
+            incomingItem.MyVisualItem.transform.SetParent(MyVisualItem.transform);
+
+            // move colliders to under my parent collider
+            var runningColliderList = new List<GameObject>();
+            for (int i=0;i<incomingItem.MyBodyColliders.Count; i++)
+            {
+                var curCollider = incomingItem.MyBodyColliders[i];
+                curCollider.transform.SetParent(ColliderParent);
+                runningColliderList.Add(incomingItem.MyBodyColliders[i]);
+            }
+            LookupPreviousColliders.Add(incomingItem.GetUniqueIndexPos, runningColliderList);
+            // new index value is take my nextIndexPos and add it to the incomingData index
+            for (int i=0;i< incomingItem.LookupPreviousParts.Keys.Count; i++)
+            {
+                // next key 
+                var curKey = incomingItem.LookupPreviousParts.Keys.ElementAt(i);
+                var curItemValue = incomingItem.LookupPreviousParts[curKey];
+                ConnectableData newData = new ConnectableData(
+                    curItemValue.Prefab,
+                    curItemValue.StoredUniqueIndex,
+                    curItemValue.LocalPivotPosition,
+                    curItemValue.LocalConnectionPointLocations,
+                    curItemValue.ConnectionDistance);
+                LookupPreviousParts.Add(curKey, newData);
+            }
+            // move connection points over to us that aren't connected
+            for(int i=0; i < incomingItem.InternalAvailableConnections.Count; i++)
+            {
+                var curPoint = incomingItem.InternalAvailableConnections[i];
+                if(curPoint.ConnectionPointStatusPt != ConnectionPointStatus.Connected)
+                {
+                    curPoint.transform.SetParent(ConnectionPointParent);
+                    myConnectionPoints.Add(curPoint);
+                }
+            }
+            // remove my other triggers
+            myConnectionPoints.Remove(incomingConnectionPt);
+            myConnectionPoints.Remove(myConnectionPoint);
+            //
+            // Debug all the data to confirm we are tracking what we need to track
+            for(int i = 0; i < LookupPreviousParts.Keys.Count; i++)
+            {
+                var curKey = LookupPreviousParts.Keys.ElementAt(i);
+                var curData = LookupPreviousParts[curKey];
+                Debug.Log($"Key: {curKey} => {curData.Prefab.gameObject}");
+            }
+            // Debug connectionpoints
+            for (int i = 0; i < myConnectionPoints.Count; i++)
+            {
+                Debug.Log($"Connection Point: {myConnectionPoints[i].name}");
+            }
+            // reset internal connections based on open points
+            
+            InternalAvailableConnections.Clear();
+            for(int i = 0; i < myConnectionPoints.Count; i++)
+            {
+                var curPoint = myConnectionPoints[i];
+                if(curPoint.ConnectionPointStatusPt != ConnectionPointStatus.Connected)
+                {
+                    InternalAvailableConnections.Add(curPoint);
+                }
+            }
+        }
+        #endregion
+        #region Alignment Related
+        /// <summary>
+        /// For Alignment purposes
+        /// </summary>
+        /// <param name="otherItem"></param>
+        /// <param name="availableConnections"></param>
+        /// <returns></returns>
+        public bool TryAlignmentOnRelease(ConnectionPart otherItem, List<ConnectionPointUnity> availableConnections)
+        {
+            //compare my connection points to other item connections points closest distance wins
+            if (otherItem != null)
+            {
+                ConnectionPointUnity myClosestPoint = null;
+                ConnectionPointUnity otherClosestPoint = null;
+                float closestDistance = ConnectionDistanceMax;
+                for (int i = 0; i < availableConnections.Count; i++)
+                {
+                    var curPoint = availableConnections[i];
+                    for (int j = 0; j < otherItem.InternalAvailableConnections.Count; j++)
+                    {
+                        var otherPoint = otherItem.InternalAvailableConnections[j];
+                        var distCheck = Vector3.Distance(curPoint.transform.position, otherPoint.transform.position);
+                        if (distCheck < closestDistance)
+                        {
+                            closestDistance = distCheck;
+                            myClosestPoint = curPoint;
+                            otherClosestPoint = otherPoint;
+                        }
+                    }
+                }
+                if (myClosestPoint != null && otherClosestPoint != null)
+                {
+                    var outcome = myClosestPoint.IsCompatibleWith(otherClosestPoint, out Quaternion bestRotation);
+                    Debug.Log($"Between point:{myClosestPoint.name} and other point: {otherClosestPoint.name} => Return Best Rotation {bestRotation.eulerAngles}");
+                    if (outcome.Item1)
+                    {
+                        //align the two items
+                        AlignTo(otherItem, otherClosestPoint, myClosestPoint, outcome.Item2, outcome.Item3);
+                        OnPartAlignmentMade(this, myClosestPoint, otherItem, otherClosestPoint);
+                        return true;
+                    }
+                    else
+                    {
+                        OnPartAlignmentFail(this, myClosestPoint, otherItem, otherClosestPoint);
+                        return false;
+                    }
+                }
+            }
+            return false;
+        }
+        /// <summary>
+        /// Will hook this in soon
+        /// </summary>
+        /// <param name="targetPoint"></param>
+        /// <param name="myPoint"></param>
+        /// <returns></returns>
+        public bool RemoveAlignmentOnRelease(ConnectionPointUnity targetPoint, ConnectionPointUnity myPoint)
+        {
+            targetPoint.RemoveAlignmentPoint(myPoint, false);
+            myPoint.RemoveAlignmentPoint(targetPoint, false);
+            return true;
+        }
+        protected void AlignTo(ConnectionPart targetItem, ConnectionPointUnity targetPoint, ConnectionPointUnity myPoint, Vector3 dataMyVector, Vector3 dataTargetVector)
+        {
+            // Step 1: Calculate the forward vectors from the connection points
+            Vector3 myForward = myPoint.transform.TransformDirection(myPoint.ConnectionPointData.localForward);
+            // Invert targetForward to handle 180-degree misalignment
+            Vector3 targetForward = targetPoint.transform.TransformDirection(-targetPoint.ConnectionPointData.localForward);
+            //Vector3 targetForward = targetPoint.transform.TransformDirection(targetPoint.connectionPointData.localForward);
+
+            // Convert the local data vectors to world space
+            Vector3 myDataWorld = myPoint.transform.TransformDirection(dataMyVector);
+            Vector3 targetDataWorld = targetPoint.transform.TransformDirection(dataTargetVector);
+
+            // Step 2: Compute the cross products to determine the normal vectors
+            Vector3 myCross = Vector3.Cross(myDataWorld, myForward).normalized;
+            Vector3 targetCross = Vector3.Cross(targetDataWorld, targetForward).normalized;
+
+            // Step 3: Calculate the cross product of the two normal vectors
+            Vector3 rotationAxis = Vector3.Cross(myCross, targetCross).normalized;
+
+            // Step 4: Compute the angle required to align these normal vectors
+            float angle = Vector3.SignedAngle(myCross, targetCross, rotationAxis);
+
+            // Step 5: Create a rotation that aligns myPoint with targetPoint on the first axis
+            Quaternion alignmentRotation1 = Quaternion.AngleAxis(angle, rotationAxis);
+
+            // Step 6: Reparent the object to the Fake Pivot
+            FakePivot.transform.position = myPoint.transform.position;
+            FakePivot.transform.rotation = myPoint.transform.rotation;
+            FakePivot.SetParent(null); // Ensure the pivot is in world space
+            this.transform.SetParent(FakePivot.transform);
+
+            // Step 7: Apply the first alignment rotation to the Fake Pivot
+            FakePivot.transform.rotation = alignmentRotation1 * FakePivot.transform.rotation;
+
+            // Step 8: Recalculate the forward vectors after the first rotation
+            myForward = myPoint.transform.TransformDirection(myPoint.ConnectionPointData.localForward);
+            targetForward = targetPoint.transform.TransformDirection(-targetPoint.ConnectionPointData.localForward); // Keep it inverted
+            myDataWorld = myPoint.transform.TransformDirection(dataMyVector);
+            targetDataWorld = targetPoint.transform.TransformDirection(dataTargetVector);
+
+            // Step 9: Calculate the second rotation required to align the remaining axis
+            Vector3 newRotationAxis = Vector3.Cross(myForward, targetForward).normalized;
+            float newAngle = Vector3.SignedAngle(myForward, targetForward, newRotationAxis);
+
+            Quaternion alignmentRotation2 = Quaternion.AngleAxis(newAngle, newRotationAxis);
+            
+            // Apply the second rotation
+            FakePivot.transform.rotation = alignmentRotation2 * FakePivot.transform.rotation;
+
+            // Step 10: Adjust the position of the Fake Pivot to align myPoint with targetPoint
+            Vector3 positionOffset = targetPoint.transform.position - myPoint.transform.position;
+            FakePivot.transform.position += positionOffset;
+            // Step 11: flip 180 around forward axis due to inverse conditions of targetForward
+            Vector3 pointForward = myPoint.transform.TransformDirection(myPoint.ConnectionPointData.localForward);
+            FakePivot.transform.rotation = Quaternion.AngleAxis(180f, pointForward) * FakePivot.transform.rotation;
+            
+            // Step 12: Unparent the object from the Fake Pivot
+            this.transform.SetParent(null);
+            //reparent
+            FakePivot.SetParent(this.transform);
+
+            // Step 13: Update the connection point status for both
+            myPoint.AddAlignmentPoint(targetPoint);
+            targetPoint.AddAlignmentPoint(myPoint);
+        }
+        private void OnPartAlignmentFail(ConnectionPart item, ConnectionPointUnity connectionPoint, ConnectionPart targetItem, ConnectionPointUnity targetPoint)
+        {
+            Debug.LogError($"Alignment failed... {item.gameObject.name} and {targetItem.gameObject.name}");
+        }
+        private void OnPartAlignmentMade(ConnectionPart item, ConnectionPointUnity connectionPoint, ConnectionPart targetItem, ConnectionPointUnity targetPoint)
+        {
+            Debug.LogWarning($"Alignment Made: {item.gameObject.name} and {targetItem.gameObject.name}");
+
+            //spawn my bolts based on the number of ConnectionPointData within - this will eventually be "Welds"
+            /*
+            if (FixedAttachedPrefab != null)
+            {
+                List<ConnectionFixed> bolts = new List<ConnectionFixed>();
+                for (int i = 0; i < connectionPoint.ConnectionPointData.localConnectors.Count; i++)
+                {
+                    var connectorBoltlocalPos = connectionPoint.ConnectionPointData.localConnectors[i];
+                    var pos = connectionPoint.transform.TransformPoint(connectorBoltlocalPos);
+                    var fixedPT = Instantiate(FixedAttachedPrefab, Vector3.zero, Quaternion.identity);
+                    //bolt.transform.SetParent(BoltParent);
+                    fixedPT.transform.position = pos;
+                    var boltForwardShouldBe = connectionPoint.transform.TransformDirection(connectionPoint.ConnectionPointData.localForward);
+                    // make the bolt face that forward vector
+                    fixedPT.transform.rotation = Quaternion.LookRotation(boltForwardShouldBe);
+                    fixedPT.transform.SetParent(FixedAttachedParent);
+                    fixedPT.name = $"{i.ToString()}_{connectionPoint.gameObject.name}_bolt";
+                    fixedPT.GetComponent<ConnectionFixed>().FixedAssociatedConnectionPoint = connectionPoint;
+                    fixedPT.GetComponent<ConnectionFixed>().OnPartConnectionFixedToolFinished += OnFixedWeldedToolEnd;
+
+                    bolts.Add(fixedPT.GetComponent<ConnectionFixed>());
+                    //register for bolted events
+                }
+                //setup and confirm dictionary
+                if (WeldsByPoint.ContainsKey(connectionPoint))
+                {
+                    WeldsByPoint[connectionPoint] = bolts;
+                }
+                else
+                {
+                    WeldsByPoint.Add(connectionPoint, bolts);
+                }
+                // setup AlignmentConnectionPointPair
+                if (AlignmentConnectionPointPair.ContainsKey(connectionPoint))
+                {
+                    AlignmentConnectionPointPair[connectionPoint] = targetPoint;
+                }
+                else
+                {
+                    AlignmentConnectionPointPair.Add(connectionPoint, targetPoint);
+                }
+            }
+            */
+            if (AlignmentConnectionPointPair.ContainsKey(connectionPoint))
+            {
+                AlignmentConnectionPointPair[connectionPoint] = targetPoint;
+            }
+            else
+            {
+                AlignmentConnectionPointPair.Add(connectionPoint, targetPoint);
+            }
+            OnAlignmentSuccessEvent.Invoke();
+        }
+        #endregion
+        #region Final Connection / Weld
+        /// <summary>
+        /// I am becoming part of the targetItem
+        /// </summary>
+        /// <param name="targetItem"></param>
+        /// <param name="targetPoint"></param>
+        /// <param name="myPoint"></param>
+        /// <param name="updatePair"></param>
+        public bool MakeConnection(ConnectionPart targetItem, ConnectionPointUnity targetPoint, ConnectionPointUnity myPoint)
+        {
+            // make the connection permanent
+            // make sure to close the connection points
+            // reparent the item
+            if (!ConnectionPairs.ContainsKey(myPoint))
+            {
+                // double check we are able to do this
+                if(!targetItem.RequestedConnection(targetPoint))
+                {
+                    Debug.LogError($"Connection was not made between {myPoint.name} and {targetPoint.name}");
+                    return false;
+                }
+                // remove my point from the list of connection points that I have left open
+                InternalAvailableConnections.Remove(myPoint);
+                // update the connection points
+                myPoint.AddConnectionPoint(targetPoint);
+                targetPoint.AddConnectionPoint(myPoint);
+               
+                ConnectionPairs.Add(myPoint, targetItem);
+
+                //are we statically locked?
+                //check our parent or targetItem in this case
+                if (targetItem.ConnectedLockedInPlace)
+                {
+                    //then we are
+                    connectedLockedInPlace = true;
+                }
+                //OnConnectionMade?.Invoke(this, myPoint, targetItem, targetPoint);
+                return true;
+            }
+            else
+            {
+                Debug.LogError($"My connection point is already in the dictionary... {myPoint.name}");
+                return false;
+            }
+        }
+        private void OnPartConnectionMade(ConnectionPart item, ConnectionPointUnity connectionPoint, ConnectionPart targetItem, ConnectionPointUnity targetPoint)
+        {
+            //turn off the associated triggers for those endpoints
+            Debug.LogWarning($"{this.gameObject.name} from OVRPipePart.cs got the call back for connection made=> {item.gameObject.name} with {targetItem.gameObject.name} was connected!");
+            //turn off 
+            if (ConnectionPointsTriggersLookUp.ContainsKey(connectionPoint))
+            {
+                ConnectionPointsTriggersLookUp[connectionPoint].SetActiveTrigger(false);
+                // reset the possible target since we are now connected //remove from dictionary
+                if (PossibleTargetByPoint.ContainsKey(connectionPoint))
+                {
+                    PossibleTargetByPoint.Remove(connectionPoint);
+                }
+                if (AlignmentConnectionPointPair.ContainsKey(connectionPoint))
+                {
+                    AlignmentConnectionPointPair.Remove(connectionPoint);
+                }
+                //possibleTarget = null;
+            }
+            if (targetItem.GetComponent<ConnectionPart>() != null)
+            {
+                var targetPipePart = targetItem.GetComponent<ConnectionPart>();
+                // deactivate target point trigger object
+                targetPipePart.OnPipeConnectionRequest(this, item, connectionPoint, targetPoint);
+            }
+        }
+        public bool TryToMakeAconnection(ConnectionPart otherItem,ConnectionPointUnity otherPoint,ConnectionPointUnity myPoint)
+        {
+            //make connection
+            var successConnection = MakeConnection(otherItem, otherPoint, myPoint);
+            if (successConnection)
+            {
+                OnPartConnectionMade(this, myPoint, otherItem, otherPoint);
+            }
+            else
+            {
+                OnPartConnectionFail(this, myPoint, otherItem, otherPoint);
+            }
+            return successConnection;
+        }
+        private void OnPartConnectionFail(ConnectionPart item, ConnectionPointUnity connetionPoint, ConnectionPart targetItem, ConnectionPointUnity targetPoint)
+        {
+            Debug.LogWarning($"{this.gameObject.name} got the call back for connection failed=> {item.gameObject.name} with {targetItem.gameObject.name} was not connected!");
+        }
+        /// <summary>
+        /// called from another ConnectableItem to update/notify that a connection has been requested/made
+        /// </summary>
+        /// <param name="myPoint"></param>
+        public bool RequestedConnection(ConnectionPointUnity myPoint)
+        {
+            //check this point and remove it from my AvailableConnections
+            if (InternalAvailableConnections.Contains(myPoint))
+            {
+                InternalAvailableConnections.Remove(myPoint);
+                return true;
+            }
+            return false;
+        }
+        /// <summary>
+        /// Not finished
+        /// </summary>
+        /// <param name="pointToFree"></param>
+        public void RemoveConnection(ConnectionPointUnity pointToFree)
+        {
+            
+            //John still need code here
+
+            if (ConnectionPairs.ContainsKey(pointToFree))
+            {
+                var otherItem = ConnectionPairs[pointToFree];
+               
+                
+                // need to check static conditions now?
+
+                // remove a joint?
+
+                // dictionary clean up
+                ConnectionJoints.Remove(pointToFree);
+                ConnectionPairs.Remove(pointToFree);
+                OnPartDisconnect(this, pointToFree, otherItem, pointToFree.OtherConnection);
+            }
+            
+        } 
+        /// <summary>
+        /// Returns a List of Open or !IsConnected Connection Points
+        /// </summary>
+        /// <returns></returns>
+        /// <summary>
+        /// Recursively retrieves a list of open ConnectionPointUnity objects, including those from connected items.
+        /// </summary>
+        public List<ConnectionPointUnity> GetOpenConnectionPoints()
+        {
+            // Get the open connection points from the current item
+            List<ConnectionPointUnity> openConnectionPoints = myConnectionPoints
+                .Where(point => point.ConnectionPointStatusPt != ConnectionPointStatus.Connected)
+                .ToList();
+
+            // Recursively get open connection points from connected items
+            foreach (var connectedPoint in myConnectionPoints.Where(point => point.ConnectionPointStatusPt == ConnectionPointStatus.Connected))
+            {
+                if (ConnectionPairs.TryGetValue(connectedPoint, out ConnectionPart connectedItem))
+                {
+                    // Recursively get open connection points from the connected item
+                    openConnectionPoints.AddRange(connectedItem.GetOpenConnectionPoints());
+                }
+            }
+
+            return openConnectionPoints;
+        }
         #endregion
         #endregion
     }
