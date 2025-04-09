@@ -5,6 +5,8 @@ namespace FuzzPhyte.Tools.Connections
     using System;
     using FuzzPhyte.Utility;
     using UnityEngine.EventSystems;
+    using UnityEngine.Events;
+    using static Codice.Client.Commands.WkTree.WorkspaceTreeNode;
 
     public class FP_PanMove : FP_Tool<PartData>, IFPUIEventListener<FP_Tool<PartData>>
     {
@@ -17,16 +19,26 @@ namespace FuzzPhyte.Tools.Connections
         protected Collider lastHitSnapPoint;
         [SerializeField]
         protected GameObject selectedItem;
+        public GameObject SpawnTestPrefab;
         [SerializeField]
         private FP_MoveRotateItem selectedItemDetails;
-        
+        private IFPUIEventListener<FP_Tool<PartData>> selectedItemInterface;
+        #region Unity Events Associated with Tools
+        public UnityEvent OnToolActivatedUnityEvent;
+        public UnityEvent OnToolSelectedItemUnityEvent;
+        public UnityEvent OnToolDropItemUnityEvent;
+        #endregion
         protected Vector2 mouseScreenPos;
         protected Vector3 originalLocationOnActive;
+        protected Vector3 originalHitPoint;
+        protected Vector3 localVectorOffsetFromPlanePoint;
         /// <summary>
         /// this we might adjust with other input information as needed
         /// </summary>
-        protected float originalDistanceFromCam;
-        protected float zOffsetDistance = 0f;
+        [Space]
+        [Header("Some Details on Moving")]
+        [SerializeField] protected float originalDistanceFromCam;
+        [SerializeField] protected float zOffsetDistance = 0f;
         public bool UseOffsetGridSnapping = true;
         public float OffsetGridSize = 0.025f;
         [SerializeField]
@@ -43,6 +55,37 @@ namespace FuzzPhyte.Tools.Connections
         public bool UseGameObjectPositionNotCollider;
         public event Action<Collider,GameObject> OnSelectionEndAction;
 
+        
+        #region testing
+        public void TestingDebug(string message)
+        {
+            Debug.LogWarning($"Testing Debug: {message}");
+        }
+        #endregion
+        /// <summary>
+        /// tweak our z offset from another user input like forward/backward key
+        /// </summary>
+        /// <param name="passedZOffset"></param>
+        public void UpdateZOffset(float passedZOffset)
+        {
+            if (UseOffsetGridSnapping)
+            {
+                if (passedZOffset > 0)
+                {
+                    zOffsetDistance += OffsetGridSize;
+
+                }
+                else
+                {
+                    zOffsetDistance -= OffsetGridSize;
+                }
+                return;
+            }
+            //normal non grid snapping
+
+            zOffsetDistance += passedZOffset;
+
+        }
         #region Interface Requirements
         public void OnUIEvent(FP_UIEventData<FP_Tool<PartData>> eventData)
         {
@@ -67,24 +110,41 @@ namespace FuzzPhyte.Tools.Connections
             {
                 if(StartTool())
                 {
-                    //raycast time
-                    Plane fPlane = new Plane(ToolCamera.transform.forward,ForwardPlaneLocation.position);
+                    //raycast time ortho camera
+                    Debug.LogWarning($"Pointer DOWN Coordinates: {eventData.position}");
+                    Plane fPlane = new Plane(ForwardPlaneLocation.transform.forward*-1, ForwardPlaneLocation.position);
+                    FP_UtilityData.MakePlane(ForwardPlaneLocation.position, ForwardPlaneLocation.forward * -1f,Color.green,2,10);
+                    //var PointData = FP_UtilityData.GetMouseWorldPositionOnPlane(ToolCamera, eventData.position, fPlane);
+                    //Plane fPlane = new Plane(ToolCamera.transform.forward,ForwardPlaneLocation.position);
                     var PointData = FP_UtilityData.GetMouseWorldPositionOnPlane(ToolCamera,eventData.position,fPlane);
                     RaycastHit potentialHit;
                     //var worldPoint = ToolCamera.ScreenToWorldPoint(eventData.position);
                     var direction = (PointData.Item2 - ToolCamera.transform.position).normalized;
                     UnityEngine.Ray ray = new Ray(ToolCamera.transform.position, direction);
                     Debug.LogWarning($"Ray: {ray.origin} | {ray.direction}");
-                    Debug.DrawRay(ray.origin, ray.direction * RaycastMaxDistance, FP_UtilityData.ReturnColorByStatus(SequenceStatus.Unlocked), 5f);
+                    Debug.DrawRay(ray.origin, ray.direction * RaycastMaxDistance, FP_UtilityData.ReturnColorByStatus(SequenceStatus.Unlocked), 10f);
+                    Debug.DrawRay(PointData.Item2,Vector3.up,Color.red,9f);
                     Physics.Raycast(ray, out potentialHit, RaycastMaxDistance);
                     if(potentialHit.collider!=null)
                     {
                         Debug.Log($"Hit: {potentialHit.collider.name}");
+                        originalHitPoint = potentialHit.point;
                         var FPMRItem = potentialHit.collider.gameObject.GetComponent<FP_CollideItem>();
                         if(FPMRItem!=null)
                         {
                             selectedItemDetails=FPMRItem.MoveRotateItem;
+                            selectedItemInterface = selectedItemDetails.gameObject.GetComponent<IFPUIEventListener<FP_Tool<PartData>>>();
+                            localVectorOffsetFromPlanePoint = selectedItemDetails.transform.position - PointData.Item2;
+                            Debug.DrawLine(PointData.Item2, PointData.Item2 + localVectorOffsetFromPlanePoint, Color.magenta, 10f);
+                            if (selectedItemInterface != null)
+                            {
+                                selectedItemInterface.PointerDown(eventData);
+                            }
+                            
+                            
+                            //localVectorOffsetFromHitPoint = fPlane.ClosestPointOnPlane(originalHitPoint) - originalHitPoint;
                             Debug.Log($"Hit: {selectedItemDetails.name}");
+                            
                             SelectionStart(selectedItemDetails.gameObject);
                         }
                     }
@@ -92,11 +152,58 @@ namespace FuzzPhyte.Tools.Connections
                 
             }
         }
-
+        
         public void PointerUp(PointerEventData eventData)
         {
             //throw new NotImplementedException();
-            SelectionEnd();
+            Debug.Log($"On Pointer up");
+            if (!ToolIsCurrent)
+            {
+                return;
+            }
+            if (EndTool())
+            {
+                if (selectedItemInterface != null)
+                {
+                    selectedItemInterface.PointerUp(eventData);
+                }
+                DeactivateTool();
+            }
+            else
+            {
+                DeactivateTool();
+            }
+           
+            return;
+            var nearPoint = FindNearestSnapPosition(selectedItem.transform.position);
+            Debug.Log($"Return Location:{nearPoint.Item1}, from {nearPoint.Item2.gameObject.name}");
+            selectedItem.transform.position = nearPoint.Item1;
+            Debug.Log($"SelectedItem.transform.position {selectedItem.gameObject.name}");
+            lastHitSnapPoint = nearPoint.Item2;
+            isMoving = false;
+            //snap to nearest snap point?
+            if (OnSelectionEndAction == null)
+            {
+                Debug.LogError($"Our OnSelectionEndAction apparently is null!?");
+            }
+            else
+            {
+                if (lastHitSnapPoint != null)
+                {
+                    OnSelectionEndAction.Invoke(lastHitSnapPoint, selectedItem);
+                }
+                else
+                {
+                    Debug.LogWarning($"no lastHitSnapPoint");
+                }
+            }
+
+            if (selectedItemDetails != null)
+            {
+                selectedItemDetails.MoveEnd();
+            }
+            selectedItemDetails = null;
+            selectedItem = null;
         }
 
         public void PointerDrag(PointerEventData eventData)
@@ -111,77 +218,16 @@ namespace FuzzPhyte.Tools.Connections
             }
             if(UseTool())
             {
+                //var passedMouseCor = eventData.position;
+                if (selectedItemInterface != null)
+                {
+                    selectedItemInterface.PointerDrag(eventData);
+                }
                 UpdateMouseScreenPosition(eventData.position);
             }
         }
         #endregion
-        /// <summary>
-        /// Assuming something else is handling mouse information - we just need that :)
-        /// </summary>
-        /// <param name="passedMouseCor"></param>
-        public void UpdateMouseScreenPosition(Vector2 passedMouseCor)
-        {
-            //screen starts 0,0 bottom left
-            //screen ends Screen.width, Screen.height top right
-            if(!isMoving)
-            {
-                return;
-            }
-            mouseScreenPos = passedMouseCor;
-            //move item
-            if (selectedItem == null) return;
-
-            Vector3 calculatedPos = ToolCamera.ScreenToWorldPoint(new Vector3(mouseScreenPos.x, mouseScreenPos.y, originalDistanceFromCam+ zOffsetDistance));
-            var returnLocation = calculatedPos;
-            //get items localized location based on items information and restrictions
-            //we are then going to override that if we can or have the authority to do so
-            
-            //can do some override here and/or lock by our manager
-            //this will ignore the local items restrictions entirely for movement
-            //Apply axis lock if we have authority
-            if (ManagerOverride) 
-            {
-                //manager has authority 
-                //just need to check on our locked global axis.
-                if (IsXLocked) returnLocation.x = selectedItem.transform.position.x;
-                if (IsYLocked) returnLocation.y = selectedItem.transform.position.y;
-                if (IsZLocked) returnLocation.z = selectedItem.transform.position.z;
-            }
-            else
-            {
-                //individual item has authority
-                //use the on item restrictions to move the item
-                returnLocation=selectedItemDetails.MoveItem(calculatedPos);
-            }
-
-            selectedItem.transform.position = returnLocation;
-        }
         
-        
-        /// <summary>
-        /// tweak our z offset from another user input like forward/backward key
-        /// </summary>
-        /// <param name="passedZOffset"></param>
-        public void UpdateZOffset(float passedZOffset)
-        {
-            if (UseOffsetGridSnapping)
-            {
-                if (passedZOffset > 0)
-                {
-                    zOffsetDistance += OffsetGridSize;
-                    
-                }
-                else
-                {
-                    zOffsetDistance -= OffsetGridSize;
-                }
-                return;
-            }
-            //normal non grid snapping
-            
-            zOffsetDistance += passedZOffset;
-            
-        }
         #region Action Based Functions
         
         /// <summary>
@@ -189,7 +235,7 @@ namespace FuzzPhyte.Tools.Connections
         /// Coming in from the CC_Pickable Events
         /// </summary>
         /// <param name="item"></param>
-        public void SelectionStart(GameObject item)
+        protected void SelectionStart(GameObject item)
         {
             if(item==null)
             {
@@ -217,55 +263,74 @@ namespace FuzzPhyte.Tools.Connections
             //fin
             isMoving = true;
             selectedItemDetails.MoveStarted();
+            OnToolSelectedItemUnityEvent.Invoke();
             //OnSelectionStartAction.Invoke(selectedItem);
         }
+        
         /// <summary>
-        /// public access for selection ending based events
+        /// Assuming something else is handling mouse information - we just need that :)
         /// </summary>
-        public void SelectionEnd()
+        /// <param name="passedMouseCor"></param>
+        public void UpdateMouseScreenPosition(Vector2 passedMouseCor)
         {
-            Debug.Log($"On Pointer up");
-            if(!ToolIsCurrent)
+            //screen starts 0,0 bottom left
+            //screen ends Screen.width, Screen.height top right
+            if (!isMoving)
             {
                 return;
             }
-            if (EndTool())
-            {
-                DeactivateTool();
-            }else
-            {
-                 DeactivateTool();
-            }
+            mouseScreenPos = passedMouseCor;
+            //move item
+            if (selectedItem == null) return;
+            //Debug.LogWarning($"Pointer DRAG Coordinates: {passedMouseCor}");
+            
+            Plane fPlane = new Plane(ToolCamera.transform.forward, ForwardPlaneLocation.position);
+            var PointData = FP_UtilityData.GetMouseWorldPositionOnPlane(ToolCamera, passedMouseCor, fPlane);
+            //RaycastHit potentialHit;
+            //var worldPoint = ToolCamera.ScreenToWorldPoint(eventData.position);
+            var direction = (PointData.Item2 - ToolCamera.transform.position).normalized;
+            UnityEngine.Ray rayMouse = new Ray(ToolCamera.transform.position, direction);
+            //RaycastHit potentialHit;
+            //Physics.Raycast(rayMouse, out potentialHit, RaycastMaxDistance);
+            //var rayMouse = ReturnRayFromToolCameraUsingPlane(ToolCamera.transform.position + (ToolCamera.transform.forward * originalDistanceFromCam), passedMouseCor);
+            //var rayMouse = ToolCamera.ScreenPointToRay(mouseScreenPos);
+            Debug.DrawRay(rayMouse.origin, rayMouse.direction * RaycastMaxDistance, FP_UtilityData.ReturnColorByStatus(SequenceStatus.Active), 5f);
+            
+            //now the offset math
+
+            Vector3 returnLocation = PointData.Item2 + localVectorOffsetFromPlanePoint;
+
+            //var pointAlongTheRay = ToolCamera.transform.position + (rayMouse.direction * originalDistanceFromCam);
+            //Vector3 calculatedPos = ToolCamera.ScreenToWorldPoint(new Vector3(mouseScreenPos.x, mouseScreenPos.y, ToolCamera.transform.position.z+originalDistanceFromCam + zOffsetDistance));
+            //Vector3 returnLocation = pointAlongTheRay + localVectorOffsetFromPlanePoint;
+            selectedItem.transform.position = returnLocation;
             return;
-            var nearPoint = FindNearestSnapPosition(selectedItem.transform.position);
-            Debug.Log($"Return Location:{nearPoint.Item1}, from {nearPoint.Item2.gameObject.name}");
-            selectedItem.transform.position = nearPoint.Item1;
-            Debug.Log($"SelectedItem.transform.position { selectedItem.gameObject.name}");
-            lastHitSnapPoint=nearPoint.Item2;
-            isMoving = false;
-            //snap to nearest snap point?
-            if(OnSelectionEndAction==null)
+            //var returnLocation = pointAlongTheRay;
+            //get items localized location based on items information and restrictions
+            //we are then going to override that if we can or have the authority to do so
+
+            //can do some override here and/or lock by our manager
+            //this will ignore the local items restrictions entirely for movement
+            //Apply axis lock if we have authority
+            if (ManagerOverride)
             {
-                Debug.LogError($"Our OnSelectionEndAction apparently is null!?");
-            }else
-            {
-                if(lastHitSnapPoint!=null)
-                {
-                    OnSelectionEndAction.Invoke(lastHitSnapPoint,selectedItem);
-                }
-                else
-                {
-                    Debug.LogWarning($"no lastHitSnapPoint");
-                }
+                //manager has authority 
+                //just need to check on our locked global axis.
+                if (IsXLocked) returnLocation.x = selectedItem.transform.position.x;
+                if (IsYLocked) returnLocation.y = selectedItem.transform.position.y;
+                if (IsZLocked) returnLocation.z = selectedItem.transform.position.z;
             }
+            else
+            {
+                //individual item has authority
+                //use the on item restrictions to move the item
+                returnLocation = selectedItemDetails.MoveItem(returnLocation);
+            }
+
            
-            if (selectedItemDetails != null)
-            {
-                selectedItemDetails.MoveEnd();
-            }
-            selectedItemDetails = null;
-            selectedItem = null;
+            Debug.LogWarning($"Going to this location: {selectedItem.transform.position}");
         }
+        
         #endregion
         /// <summary>
         /// This is coming in from Unlock sequences
@@ -395,6 +460,30 @@ namespace FuzzPhyte.Tools.Connections
             return false;
         }
 
-        
+        #region Base Overrides
+        /// <summary>
+        /// This just sets our state up for being ready to use the tool
+        /// </summary>
+        public override bool ActivateTool()
+        {
+            if (base.ActivateTool())
+            {
+                ToolIsCurrent = true;
+                OnToolActivatedUnityEvent.Invoke();
+                return true;
+            }
+            return false;
+        }
+        public override bool DeactivateTool()
+        {
+            if (base.DeactivateTool())
+            {
+                ToolIsCurrent = false;
+                OnToolDropItemUnityEvent.Invoke();
+                return true;
+            }
+            return false;
+        }
+        #endregion
     }
 }

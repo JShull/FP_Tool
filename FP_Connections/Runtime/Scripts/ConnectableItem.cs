@@ -231,6 +231,12 @@ namespace FuzzPhyte.Tools.Connections
             return false;
         }
 
+        public bool RemoveAlignmentOnRelease(ConnectionPointUnity targetPoint, ConnectionPointUnity myPoint)
+        {
+            targetPoint.RemoveAlignmentPoint(myPoint, false);
+            myPoint.RemoveAlignmentPoint(targetPoint, false);
+            return true;
+        }
         protected void AlignTo(ConnectableItem targetItem, ConnectionPointUnity targetPoint, ConnectionPointUnity myPoint, Vector3 dataMyVector, Vector3 dataTargetVector)
         {
             // Step 1: Calculate the forward vectors from the connection points

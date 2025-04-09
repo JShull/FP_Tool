@@ -5,6 +5,7 @@ namespace FuzzPhyte.Tools.Connections
     using System.Collections.Generic;
     using System.Linq;
     using UnityEngine;
+    using UnityEngine.Events;
     using UnityEngine.EventSystems;
 
     /// <summary>
@@ -18,6 +19,12 @@ namespace FuzzPhyte.Tools.Connections
         public GameObject FixedAttachedPrefab;
         public Transform FixedAttachedParent;
         public Transform ConnectionPtParent;
+        [Space]
+        [Header("Unity Events")]
+        public UnityEvent OnAlignmentSuccessEvent;
+        public UnityEvent OnTriggerEnterUnityEvent;
+        public UnityEvent OnTriggerExitUnityEvent;
+        
         //data
         public List<ConnectionToolTrigger> ConnectionPointTriggersListeners = new List<ConnectionToolTrigger>();
         public Dictionary<ConnectionPointUnity, ConnectionToolTrigger> ConnectionPointsTriggersLookUp = new Dictionary<ConnectionPointUnity, ConnectionToolTrigger>();
@@ -95,12 +102,33 @@ namespace FuzzPhyte.Tools.Connections
             }
         }
         #region Listeners for External Pointers/Events
-        
-        
-        
-       
+
+
+
+
         #endregion
         #region Interface Requirements for Input Information
+        /// <summary>
+        /// This just sets our state up for being ready to use the tool
+        /// </summary>
+        public override bool ActivateTool()
+        {
+            if (base.ActivateTool())
+            {
+                ToolIsCurrent = true;
+                return true;
+            }
+            return false;
+        }
+        public override bool DeactivateTool()
+        {
+            if (base.DeactivateTool())
+            {
+                ToolIsCurrent = false;
+                return true;
+            }
+            return false;
+        }
         /// <summary>
         /// Called from the actual moving 'Tool'
         /// </summary>
@@ -130,7 +158,12 @@ namespace FuzzPhyte.Tools.Connections
         public void PointerDown(PointerEventData eventData)
         {
             //throw new System.NotImplementedException();
-            Debug.Log($"{this.gameObject.name}: Pointer down");
+            ActivateTool();
+            if (StartTool())
+            {
+                Debug.Log($"{this.gameObject.name}: ConnectionPart.cs Pointer DOWN");
+            }
+            
         }
         /// <summary>
         /// Unity Event Wrapper tied to the PointerEventData class
@@ -143,7 +176,7 @@ namespace FuzzPhyte.Tools.Connections
             // see if we had a possible pipe target
             // possible target comes in from the trigger events
             // loop through our dictionary of possible targets
-
+            Debug.Log($"{this.gameObject.name}: ConnectionPart.cs Pointer UP");
             var possibleTargets = PossibleTargetByPoint.Keys.ToList();
             List<ConnectableItem> allPossibleTargets = new List<ConnectableItem>();
             for (int i = 0; i < possibleTargets.Count; i++)
@@ -183,12 +216,20 @@ namespace FuzzPhyte.Tools.Connections
                         }
                     }
                 }
+                else
+                {
+                    Debug.LogWarning($"{this.gameObject.name}, has zero connections, need to clean up! I currently have: {AlignmentConnectionPointPair.Count} Alignment(s)");
+                }
             }
+            DeactivateTool();
         }
 
         public void PointerDrag(PointerEventData eventData)
         {
-            
+            if (UseTool())
+            {
+                //Debug.Log($"{this.gameObject.name}: ConnectionPart.cs Pointer DRAG");
+            }
         }
         #endregion
         #region Delegate stuff
@@ -235,8 +276,8 @@ namespace FuzzPhyte.Tools.Connections
         {
             Debug.LogWarning($"Alignment Made: {item.gameObject.name} and {targetItem.gameObject.name}");
 
-            //spawn my bolts based on the number of ConnectionPointData within
-            
+            //spawn my bolts based on the number of ConnectionPointData within - this will eventually be "Welds"
+            /*
             if (FixedAttachedPrefab != null)
             {
                 List<ConnectionFixed> bolts = new List<ConnectionFixed>();
@@ -277,7 +318,7 @@ namespace FuzzPhyte.Tools.Connections
                     AlignmentConnectionPointPair.Add(connectionPoint, targetPoint);
                 }
             }
-            
+            */
             if (AlignmentConnectionPointPair.ContainsKey(connectionPoint))
             {
                 AlignmentConnectionPointPair[connectionPoint] = targetPoint;
@@ -286,6 +327,7 @@ namespace FuzzPhyte.Tools.Connections
             {
                 AlignmentConnectionPointPair.Add(connectionPoint, targetPoint);
             }
+            OnAlignmentSuccessEvent.Invoke();
         }
         
         private void ResetDestroyBoltsAfterMoving(ConnectionPointUnity connectionPt)
@@ -487,6 +529,7 @@ namespace FuzzPhyte.Tools.Connections
         #region Callbacks for Trigger Events Tied to ConnectionPointUnity
         protected void OnConnectionPointTriggerEnter(Collider item, ConnectionPointUnity myPoint, ConnectionPointUnity otherPoint)
         {
+            Debug.LogWarning($"Callback--> Connection Point Trigger Enter: {item.gameObject.name} with {myPoint.gameObject.name}");
             if (otherPoint.TheConnectItem != null)
             {
                 if (PossibleTargetByPoint.ContainsKey(myPoint))
@@ -496,6 +539,7 @@ namespace FuzzPhyte.Tools.Connections
                 else
                 {
                     PossibleTargetByPoint.Add(myPoint, otherPoint.TheConnectItem);
+                    OnTriggerEnterUnityEvent.Invoke();
                     Debug.LogWarning($"This {this.gameObject.name} is adding Dictionary target point: {myPoint.gameObject.name} with {otherPoint.TheConnectItem.gameObject.name}");
                 }
                 //sync with Alignment AlignmentConnectionPointPair
@@ -512,8 +556,10 @@ namespace FuzzPhyte.Tools.Connections
         }
         protected void OnConnectionPointTriggerExit(Collider item, ConnectionPointUnity myPoint, ConnectionPointUnity otherPoint)
         {
+            Debug.LogWarning($"Callback--> Connection Point Trigger Exit: {item.gameObject.name} with {myPoint.gameObject.name}");
             if (item.gameObject.GetComponent<ConnectionPointUnity>() != null)
             {
+               
                 //var cpu = item.gameObject.GetComponent<ConnectionPointUnity>();
                 if (PossibleTargetByPoint.ContainsKey(myPoint))
                 {
@@ -522,11 +568,15 @@ namespace FuzzPhyte.Tools.Connections
                     if (AlignmentConnectionPointPair.ContainsKey(myPoint))
                     {
                         AlignmentConnectionPointPair.Remove(myPoint);
+                        OnTriggerExitUnityEvent.Invoke();
                         Debug.LogWarning($"This {this.gameObject.name} is removing an alignment connection point {myPoint.gameObject.name}");
+                        myPoint.RemoveAlignmentPoint(otherPoint,false);
+                        otherPoint.RemoveAlignmentPoint(myPoint, false);
                     }
                 }
                 else
                 {
+                    Debug.LogWarning($"This {this.gameObject.name} is missing a target point in the dictionary: {myPoint.gameObject.name}");
                     return;
                 }
             }
