@@ -4,14 +4,15 @@ namespace FuzzPhyte.Tools
     using FuzzPhyte.Utility;
     using System;
     using System.Collections.Generic;
-    public abstract class FP_Tool<T> : MonoBehaviour 
+    public abstract class FP_Tool<T> : MonoBehaviour,IFPTool 
         where T : FP_Data
     {
         [SerializeField]
         protected T toolData;
         public Camera ToolCamera;
         public FPToolState CurrentState;
-
+        [Space]
+        public bool LoopTool = false;
         public event Action<FP_Tool<T>> OnActivated;
         public event Action<FP_Tool<T>> OnStarting;
         public event Action<FP_Tool<T>> OnActiveUse;
@@ -36,31 +37,38 @@ namespace FuzzPhyte.Tools
         {
             toolData = data;
         }
-
         public virtual bool ActivateTool()
         {
             Debug.Log($"Activating tool {this}");
             return SetState(FPToolState.Activated);
         }
-
         public virtual bool StartTool()
         {
             //Debug.Log($"Starting tool {this}");
             return SetState(FPToolState.Starting);
         }
-
         public virtual bool UseTool()
         {
             //Debug.Log($"Using tool {this}");
             return SetState(FPToolState.ActiveUse);
         }
-
         public virtual bool EndTool()
         {
             return SetState(FPToolState.Ending);
         }
-
         public virtual bool DeactivateTool()
+        {
+            bool confirmDeactivation = SetState(FPToolState.Deactivated);
+            if(LoopTool)
+            {
+                if(confirmDeactivation)
+                {
+                    return SetState(FPToolState.Activated);
+                }
+            }
+            return confirmDeactivation;
+        }
+        public virtual bool ForceDeactivateTool()
         {
             return SetState(FPToolState.Deactivated);
         }

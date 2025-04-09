@@ -7,7 +7,6 @@ namespace FuzzPhyte.Tools.Connections
     using UnityEngine;
     using UnityEngine.Events;
     using UnityEngine.EventSystems;
-
     /// <summary>
     /// Responsible to manage the Pointer Event Coming in
     /// OVRPipePart
@@ -15,9 +14,10 @@ namespace FuzzPhyte.Tools.Connections
     public class ConnectionPart : FP_Tool<PartData>, IFPUIEventListener<FP_Tool<PartData>>
     {
         [Header("Part Related")]
-        //public ConnectableItem TheItem;
         public GameObject FixedAttachedPrefab;
+        [Tooltip("The reference transform we might attach another connected part to later for attachment/removal")]
         public Transform FixedAttachedParent;
+        [Tooltip("The reference transform we are going to nest our connection points under")]
         public Transform ConnectionPtParent;
         [SerializeField]
         protected int UniqueIndexPos;
@@ -27,7 +27,8 @@ namespace FuzzPhyte.Tools.Connections
         public UnityEvent OnAlignmentSuccessEvent;
         public UnityEvent OnTriggerEnterUnityEvent;
         public UnityEvent OnTriggerExitUnityEvent;
-        public List<ConnectionToolTrigger> ConnectionPointTriggersListeners = new List<ConnectionToolTrigger>();
+        [Tooltip("List of ConnectionToolTrigger listeners that we're monitoring/responsible for")]
+        protected List<ConnectionToolTrigger> ConnectionPointTriggersListeners = new List<ConnectionToolTrigger>();
         public Dictionary<ConnectionPointUnity, ConnectionToolTrigger> ConnectionPointsTriggersLookUp = new Dictionary<ConnectionPointUnity, ConnectionToolTrigger>();
         [SerializeField]
         [Tooltip("Hold a list of bolts by ConnectionPointUnity")]
@@ -93,6 +94,15 @@ namespace FuzzPhyte.Tools.Connections
                     ConnectionDistanceMax
                     )
             );
+            //do we have a fake pivot for alignment needs?
+            if(FakePivot == null)
+            {
+                Debug.LogError($"FakePivot is null, creating a new one for you.");
+                FakePivot = new GameObject("FakePivot").transform;
+                FakePivot.transform.SetParent(this.transform);
+                FakePivot.transform.localPosition = Vector3.zero;
+                FakePivot.gameObject.layer = this.gameObject.layer; // Set the layer of the Fake Pivot to match this object
+            }
         }
         public virtual void OnEnable()
         {
@@ -698,6 +708,7 @@ namespace FuzzPhyte.Tools.Connections
             Quaternion alignmentRotation1 = Quaternion.AngleAxis(angle, rotationAxis);
 
             // Step 6: Reparent the object to the Fake Pivot
+            
             FakePivot.transform.position = myPoint.transform.position;
             FakePivot.transform.rotation = myPoint.transform.rotation;
             FakePivot.SetParent(null); // Ensure the pivot is in world space

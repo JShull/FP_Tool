@@ -44,7 +44,7 @@ namespace FuzzPhyte.Tools.Samples
         /// </summary>
         public void DeactivateResetLinesUI()
         {
-            DeactivateTool();
+            ForceDeactivateTool();
             //blast all the lines
             foreach (var line in allMeasuredLines)
             {
@@ -53,7 +53,7 @@ namespace FuzzPhyte.Tools.Samples
         }
         public void DeactivateToolFromUI()
         {
-            DeactivateTool();
+            ForceDeactivateTool();
         }
         
         public override void Initialize(FP_MeasureToolData data)
@@ -79,6 +79,30 @@ namespace FuzzPhyte.Tools.Samples
             Debug.LogWarning($"Didn't activate the tool?");
             return false;
         }
+        public override bool DeactivateTool()
+        {
+            if(base.DeactivateTool())
+            {
+                if(!LoopTool)
+                {
+                    //we do want to turn off ToolIsCurrent
+                    ToolIsCurrent = false;
+                }
+                OnMeasureToolDeactivated.Invoke();
+                return true;
+            }
+            return false;
+        }
+        public override bool ForceDeactivateTool()
+        {
+            if(base.ForceDeactivateTool())
+            {
+                ToolIsCurrent = false;
+                OnMeasureToolDeactivated.Invoke();
+                return true;
+            }
+            return false;
+        }
         /// <summary>
         /// Interface method for the FP UI Event Listener system to process the event data
         /// </summary>
@@ -92,6 +116,7 @@ namespace FuzzPhyte.Tools.Samples
             }
             if (eventData.TargetObject == this.gameObject)
             {
+                
                 //it's me
                 Debug.LogWarning($"Event Data Target Object is me {eventData.TargetObject} {this}");
                 switch (eventData.EventType)
@@ -155,7 +180,6 @@ namespace FuzzPhyte.Tools.Samples
                 }
             } 
         }
-
         public void PointerDrag(PointerEventData eventData)
         {
             if(!ToolIsCurrent)
@@ -223,16 +247,7 @@ namespace FuzzPhyte.Tools.Samples
                 */
             }
         }
-        public override bool DeactivateTool()
-        {
-            if(base.DeactivateTool())
-            {
-                ToolIsCurrent = false;
-                OnMeasureToolDeactivated.Invoke();
-                return true;
-            }
-            return false;
-        }
+        
         /// <summary>
         /// Returns a screen position coordinate based on the canvas already assigned in the inspector
         /// </summary>

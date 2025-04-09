@@ -14,6 +14,7 @@ namespace FuzzPhyte.Tools.Samples
     public class FP_MeasureTool3D : FP_Tool<FP_MeasureToolData>, IFPUIEventListener<FP_Tool<FP_MeasureToolData>>
     {
         public Transform ParentDecals;
+        public float RaycastMaxDistance = 20f;
         [Tooltip("We are 2D casting into 3D Space - this RectTransform is our boundary")]
         [SerializeField] protected RectTransform measurementParentSpace;
         [Header("Unity Events")]
@@ -23,34 +24,14 @@ namespace FuzzPhyte.Tools.Samples
         [Header("Internal parameters")]
         protected Vector3 startPosition = Vector3.zero;
         protected Vector3 endPosition = Vector3.zero;
+        protected Plane cachedPlane;
         [SerializeField] FP_MeasureLine3D currentActiveLine;
         [SerializeField]protected List<FP_MeasureLine3D> allMeasuredLines = new List<FP_MeasureLine3D>();
-        /*
-        [ContextMenu("Spawn Chalk Line")]
         
-        public void SpawnChalkLineTest()
-        {
-            startPosition = FirstPointObjectTest.transform.position;
-            endPosition = SecondPointObjectTest.transform.position;
-            StartCoroutine(DelayLineGeneration());
-        }
-        protected IEnumerator DelayLineGeneration()
-        {
-            var spawnLinePrefab = GameObject.Instantiate(toolData.MeasurementPointPrefab);
-            currentActiveLine = spawnLinePrefab.GetComponent<FP_MeasureLine3D>(); 
-            yield return new WaitForSeconds(0.5f);
-            if (currentActiveLine!=null)
-            {
-                currentActiveLine.Setup(this);
-                currentActiveLine.DropFirstPoint(startPosition);
-                yield return new WaitForSeconds(2f);
-                currentActiveLine.DropSecondPoint(endPosition);
-                UpdateMeasurementText();
-                yield return new WaitForSeconds(1f);
-                currentActiveLine.transform.SetParent(ParentDecals);
-            }
-        }
-        */
+        /// <summary>
+        /// Some additional UI reference to reset lines and deactivate if we need it
+        /// maybe on end of the game?
+        /// </summary>
         public void DeactivateResetLinesUI()
         {
             DeactivateTool();
@@ -60,9 +41,26 @@ namespace FuzzPhyte.Tools.Samples
                 Destroy(line.gameObject);
             }
         }
+        /// <summary>
+        /// Some additional UI reference to deactivate something if we needed it
+        /// </summary>
         public void DeactivateToolFromUI()
         {
-            DeactivateTool();
+            ForceDeactivateTool();
+        }
+        public override bool DeactivateTool()
+        {
+            if(base.DeactivateTool())
+            {
+                if(!LoopTool)
+                {
+                    //we do want to turn off ToolIsCurrent
+                    ToolIsCurrent = false;
+                }
+                return true;
+            }
+            Debug.LogWarning($"Didn't deactivate the tool?");
+            return false;
         }
         /// <summary>
         /// This just sets our state up for being ready to use the tool
@@ -76,6 +74,15 @@ namespace FuzzPhyte.Tools.Samples
                 return true;
             }
             Debug.LogWarning($"Didn't activate the tool?");
+            return false;
+        }
+        public override bool ForceDeactivateTool()
+        {
+            if(base.ForceDeactivateTool())
+            {
+                ToolIsCurrent = false;
+                return true;
+            }
             return false;
         }
         /// <summary>
@@ -124,11 +131,28 @@ namespace FuzzPhyte.Tools.Samples
             {
                 if(StartTool())
                 {
+                    Debug.Log($"Start Measuring...");
                     //if we do we then want to cast into 3D space
                     //activate the ray - fire it once
                     //move transform to the world space position based on the mouse position relative to rect
-                    Plane fPlane = new Plane(ToolCamera.transform.forward,ForwardPlaneLocation.position);
-                    var PointData = FP_UtilityData.GetMouseWorldPositionOnPlane(ToolCamera,eventData.position,fPlane);
+                    //Plane fPlane = new Plane(ToolCamera.transform.forward,ForwardPlaneLocation.position);
+                    cachedPlane = new Plane(ForwardPlaneLocation.transform.forward*-1, ForwardPlaneLocation.position);
+                    FP_UtilityData.DrawLinePlane(ForwardPlaneLocation.position, ForwardPlaneLocation.forward * -1f,Color.green,2,10);
+                    var PointData = FP_UtilityData.GetMouseWorldPositionOnPlane(ToolCamera,eventData.position,cachedPlane);
+                    var direction = (PointData.Item2 - ToolCamera.transform.position).normalized;
+                    Ray ray = new Ray(ToolCamera.transform.position, direction);
+                    Debug.LogWarning($"Ray: {ray.origin} | {ray.direction}");
+                    Debug.DrawRay(ray.origin, ray.direction * RaycastMaxDistance, FP_UtilityData.ReturnColorByStatus(SequenceStatus.Unlocked), 10f);
+                    Debug.DrawRay(PointData.Item2,Vector3.up,Color.red,9f);
+                    //
+                    
+                    
+                    //var PointData = FP_UtilityData.GetMouseWorldPositionOnPlane(ToolCamera,eventData.position,fPlane);
+                    //RaycastHit potentialHit;
+                    //var direction = (PointData.Item2 - ToolCamera.transform.position).normalized;
+                    //Ray ray = new Ray(ToolCamera.transform.position, direction);
+
+                    //
                     if(PointData.Item1)
                     {
                         startPosition = PointData.Item2;
@@ -169,7 +193,7 @@ namespace FuzzPhyte.Tools.Samples
                         UpdateMeasurementText();
                     }
                 }
-                //currentActiveLine.DropSecondPoint(endPosition);
+              
             }
         }
         public void PointerUp(PointerEventData eventData)
@@ -247,84 +271,5 @@ namespace FuzzPhyte.Tools.Samples
         }
         [Header("Additional Details")]
         public Transform ForwardPlaneLocation;
-        /*
-        
-        [Header("Raycaster Related Parameters")]
-        public SO_FPRaycaster RayData;
-        public Transform RaycastEndDir;
-        public Transform RaycastOrigin;
-        public float3 RayDirection
-        {
-            get { 
-                if(RaycastEndDir==null||RaycastOrigin==null)
-                {
-                    return Vector3.zero;
-                }
-                return Vector3.Normalize(RaycastEndDir.position - RaycastOrigin.position); }
-            set { RayDirection = value; }
-        }
-        protected FP_RayArgumentHit _rayHit;
-        public FP_Raycaster Raycaster { get; set; }
-        public SO_FPRaycaster FPRayInformation
-        {
-            get { return RayData; }
-            set { RayData = value; }
-        }
-        public Transform RayOrigin {
-            get { return RaycastOrigin; }
-            set { RaycastOrigin = value; }
-        }
-        public virtual void SetupRaycaster()
-        {
-            Raycaster = new FP_Raycaster(this);
-        }
-        protected virtual void Awake()
-        {
-            SetupRaycaster();
-        }
-        public virtual void OnEnable()
-        {
-            Raycaster.OnFPRayFireHit += OnRayStay;
-            Raycaster.OnFPRayEnterHit += OnRayEnter;
-            Raycaster.OnFPRayExit += OnRayExit;
-            Raycaster.ActivateRaycaster();
-        }
-        public virtual void OnDisable()
-        {
-            Raycaster.OnFPRayFireHit -= OnRayStay;
-            Raycaster.OnFPRayEnterHit -= OnRayEnter;
-            Raycaster.OnFPRayExit -= OnRayExit;
-            Raycaster.DeactivateRaycaster();
-        }
-        public virtual void OnRayEnter(object sender, FP_RayArgumentHit arg)
-        {
-            if (arg.HitObject != null)
-            {
-                Debug.LogWarning($"RAY Enter: {arg.HitObject.name}");
-            }
-            //check if our rayhit was valid
-            //update first position with the information
-            _rayHit = arg;
-        }
-        public virtual void OnRayStay(object sender, FP_RayArgumentHit arg)
-        {
-            if (arg.HitObject != null)
-            {
-                Debug.LogWarning($"RAY Stay: {arg.HitObject.name}");
-            }
-            
-            _rayHit = arg;
-        }
-        public virtual void OnRayExit(object sender, FP_RayArgumentHit arg)
-        {
-            if (arg.HitObject != null)
-            {
-                Debug.LogWarning($"RAY Exit: {arg.HitObject.name}");
-            }
-            
-            _rayHit = arg;
-        }
-        
-        */
     }
 }
