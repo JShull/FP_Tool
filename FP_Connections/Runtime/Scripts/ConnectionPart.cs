@@ -148,7 +148,6 @@ namespace FuzzPhyte.Tools.Connections
         /// Called from the actual moving 'Tool'
         /// </summary>
         /// <param name="eventData"></param>
-
         public void OnUIEvent(FP_UIEventData<FP_Tool<PartData>> eventData)
         {
             switch (eventData.EventType)
@@ -238,7 +237,6 @@ namespace FuzzPhyte.Tools.Connections
             }
             DeactivateTool();
         }
-
         public void PointerDrag(PointerEventData eventData)
         {
             if (UseTool())
@@ -251,19 +249,11 @@ namespace FuzzPhyte.Tools.Connections
             //do nothing
         }
         #endregion
-        #region Delegate stuff
+        
         #region Callbacks
-        
-       
-        private void OnPartDisconnect(ConnectionPart item, ConnectionPointUnity connectionPoint, ConnectionPart targetItem, ConnectionPointUnity targetPoint)
-        {
-            //turn on the associated triggers for those endpoints
-        }
-        
-        
+    
         private void ResetDestroyBoltsAfterMoving(ConnectionPointUnity connectionPt)
         {
-            
             if (WeldsByPoint.ContainsKey(connectionPt))
             {
                 var boltsByConnectionPoint = WeldsByPoint[connectionPt];
@@ -284,11 +274,7 @@ namespace FuzzPhyte.Tools.Connections
             {
                 Debug.LogError($"Missing the Connection Pt {connectionPt.gameObject.name} in our Bolt Dictionary");
             }
-            
-
         }
-        
-        //OnWrenchBoltToolEnd
         private void OnFixedWeldedToolEnd(ConnectionPointUnity ptData)
         {
             //check number of bolts being finished or locked in?
@@ -340,114 +326,6 @@ namespace FuzzPhyte.Tools.Connections
             }
         }
         #endregion
-
-        /// <summary>
-        /// Called from the other end - syncing the trigger states for turning them off/on
-        /// </summary>
-        /// <param name="thePointToCheck"></param>
-        public void OnPipeConnectionRequest(ConnectionPart otherPart, ConnectionPart theItemToCheck, ConnectionPointUnity thePointToCheck, ConnectionPointUnity myPointTrigger)
-        {
-            GameObject cPGameObject = null;
-            var nameOfOtherPart = otherPart.gameObject.name;
-            var nameOfMyConnection = myPointTrigger.gameObject.name;
-            var nameOfOtherConnection = thePointToCheck.gameObject.name;
-            Debug.Log($"On Pipe Connection Request running on {this.gameObject.name}, Name of The Other Part: {nameOfOtherPart} | Name of Other Connection = {nameOfOtherConnection} | Name of my Connection = {nameOfMyConnection}");
-            if (ConnectionPointsTriggersLookUp.ContainsKey(thePointToCheck))
-            {
-                ConnectionPointsTriggersLookUp[thePointToCheck].SetActiveTrigger(false);
-                cPGameObject = ConnectionPointsTriggersLookUp[thePointToCheck].gameObject;
-                thePointToCheck.ForceOtherClearConnection();
-                //possibleTarget = null;
-            }
-            if (cPGameObject != null)
-            {
-                Debug.LogWarning($"Turned off the trigger on {cPGameObject.name}!");
-            }
-            // copy data first
-            CopyIncomingData(theItemToCheck, thePointToCheck, myPointTrigger);
-
-            // clean up
-            // remove all listeners?
-            foreach (var cp in ConnectionPointTriggersListeners)
-            {
-                cp.OnPartTriggerEnterAction -= OnConnectionPointTriggerEnter;
-                cp.OnPartTriggerExitAction -= OnConnectionPointTriggerExit;
-            }
-            ConnectionPointTriggersListeners.Clear();
-            ConnectionPointsTriggersLookUp.Clear();
-
-            // move all bolts
-            
-            List<ConnectionFixed> theBoltList = new List<ConnectionFixed>();
-            int childCount = otherPart.FixedAttachedParent.childCount;
-            for (int i = 0; i < childCount; i++)
-            {
-                var otherBolt = otherPart.FixedAttachedParent.GetChild(i);
-                //clear the other listeners
-                otherBolt.GetComponent<ConnectionFixed>().OnPartConnectionFixedToolFinished -= otherPart.OnFixedWeldedToolEnd;
-                //add my listener to it
-                otherBolt.GetComponent<ConnectionFixed>().OnPartConnectionFixedToolFinished += OnFixedWeldedToolEnd;
-                theBoltList.Add(otherBolt.GetComponent<ConnectionFixed>());
-                otherBolt.GetComponent<ConnectionFixed>().FixedAssociatedConnectionPoint = myPointTrigger;
-            }
-            foreach (var aBolt in theBoltList)
-            {
-                aBolt.transform.SetParent(FixedAttachedParent);
-            }
-
-            //clear /replace bolt dictionary
-
-            if (WeldsByPoint.ContainsKey(myPointTrigger))
-            {
-                WeldsByPoint[myPointTrigger] = theBoltList;
-            }
-            else
-            {
-                WeldsByPoint.Add(myPointTrigger, theBoltList);
-            }
-            
-            // clean up internal connection list InternalAvailableConnections and drop myPointTrigger
-            if (InternalAvailableConnections.Contains(myPointTrigger))
-            {
-                InternalAvailableConnections.Remove(myPointTrigger);
-                myPointTrigger.GetComponent<ConnectionToolTrigger>().SetActiveTrigger(false);
-            }
-            if (InternalAvailableConnections.Contains(thePointToCheck))
-            {
-                InternalAvailableConnections.Remove(thePointToCheck);
-                thePointToCheck.GetComponent<ConnectionToolTrigger>().SetActiveTrigger(false);
-            }
-            // re-add our triggers based on the updated data from ThePipe
-            for (int i = 0; i < MyConnectionPoints.Count; i++)
-            {
-                var aPoint = MyConnectionPoints[i];
-                Debug.LogWarning($"Readding Triggers: {aPoint.gameObject.name}");
-                if (aPoint.gameObject.GetComponent<ConnectionToolTrigger>() != null)
-                {
-                    var cpTrigger = aPoint.gameObject.GetComponent<ConnectionToolTrigger>();
-                    ConnectionPointsTriggersLookUp.Add(aPoint, cpTrigger);
-                    ConnectionPointTriggersListeners.Add(cpTrigger);
-                    // add listener functions to the triggers
-
-                    cpTrigger.OnPartTriggerEnterAction += OnConnectionPointTriggerEnter;
-                    cpTrigger.OnPartTriggerExitAction += OnConnectionPointTriggerExit;
-
-                    aPoint.UpdateConnectableItem(this);
-                    Debug.LogWarning($"Setting the connect item to {theItemToCheck.gameObject.name} on {aPoint.gameObject.name} and registered the trigger: {cpTrigger.gameObject.name}!");
-                }
-                else
-                {
-                    Debug.LogError($"I am missing an OVRToolTrigger on {aPoint.gameObject.name}!");
-                }
-            }
-            // lets now blast the other item and my Trigger
-
-            StartCoroutine(DestroyOneFrameLater(myPointTrigger.gameObject));
-            StartCoroutine(DestroyOneFrameLater(thePointToCheck.gameObject));
-            StartCoroutine(DestroyOneFrameLater(otherPart.gameObject));
-            //this.possibleTarget = null;
-            Debug.LogWarning($"Destroyed {nameOfOtherPart}, is this other ConnectableItem still around? {theItemToCheck.gameObject.name}| I Also got rid of {nameOfMyConnection}");
-        }
         IEnumerator DestroyOneFrameLater(GameObject theOBJToDestroy)
         {
             yield return new WaitForFixedUpdate();
@@ -455,7 +333,6 @@ namespace FuzzPhyte.Tools.Connections
             yield return new WaitForEndOfFrame();
             Destroy(theOBJToDestroy, Time.fixedDeltaTime);
         }
-
         #region Callbacks for Trigger Events Tied to ConnectionPointUnity
         protected void OnConnectionPointTriggerEnter(Collider item, ConnectionPointUnity myPoint, ConnectionPointUnity otherPoint)
         {
@@ -512,10 +389,8 @@ namespace FuzzPhyte.Tools.Connections
             }
         }
         #endregion
-        #endregion
-    
-        #region Connectable Item Moved over
         
+        #region Connectable Item 
         [Header("Parameters")]
         public float ConnectionDistanceMax = 1.5f;
         public Transform FakePivot;
@@ -533,7 +408,6 @@ namespace FuzzPhyte.Tools.Connections
         public Dictionary<ConnectionPointUnity, ConnectionPart> ConnectionPairs = new Dictionary<ConnectionPointUnity, ConnectionPart>();
         [Tooltip("If we end up connecting larger pieces")]
         public Dictionary<ConnectionPointUnity, Joint> ConnectionJoints = new Dictionary<ConnectionPointUnity, Joint>();
-
         
         [Tooltip("All/any actual points open for a connection")]
         public List<ConnectionPointUnity> InternalAvailableConnections = new List<ConnectionPointUnity>();
@@ -815,50 +689,7 @@ namespace FuzzPhyte.Tools.Connections
         }
         #endregion
         #region Final Connection / Weld
-        /// <summary>
-        /// I am becoming part of the targetItem
-        /// </summary>
-        /// <param name="targetItem"></param>
-        /// <param name="targetPoint"></param>
-        /// <param name="myPoint"></param>
-        /// <param name="updatePair"></param>
-        public bool MakeConnection(ConnectionPart targetItem, ConnectionPointUnity targetPoint, ConnectionPointUnity myPoint)
-        {
-            // make the connection permanent
-            // make sure to close the connection points
-            // reparent the item
-            if (!ConnectionPairs.ContainsKey(myPoint))
-            {
-                // double check we are able to do this
-                if(!targetItem.RequestedConnection(targetPoint))
-                {
-                    Debug.LogError($"Connection was not made between {myPoint.name} and {targetPoint.name}");
-                    return false;
-                }
-                // remove my point from the list of connection points that I have left open
-                InternalAvailableConnections.Remove(myPoint);
-                // update the connection points
-                myPoint.AddConnectionPoint(targetPoint);
-                targetPoint.AddConnectionPoint(myPoint);
-               
-                ConnectionPairs.Add(myPoint, targetItem);
-
-                //are we statically locked?
-                //check our parent or targetItem in this case
-                if (targetItem.ConnectedLockedInPlace)
-                {
-                    //then we are
-                    connectedLockedInPlace = true;
-                }
-                //OnConnectionMade?.Invoke(this, myPoint, targetItem, targetPoint);
-                return true;
-            }
-            else
-            {
-                Debug.LogError($"My connection point is already in the dictionary... {myPoint.name}");
-                return false;
-            }
-        }
+        
         private void OnPartConnectionMade(ConnectionPart item, ConnectionPointUnity connectionPoint, ConnectionPart targetItem, ConnectionPointUnity targetPoint)
         {
             //turn off the associated triggers for those endpoints
@@ -899,6 +730,50 @@ namespace FuzzPhyte.Tools.Connections
             }
             return successConnection;
         }
+        /// <summary>
+        /// I am becoming part of the targetItem
+        /// </summary>
+        /// <param name="targetItem"></param>
+        /// <param name="targetPoint"></param>
+        /// <param name="myPoint"></param>
+        /// <param name="updatePair"></param>
+        protected bool MakeConnection(ConnectionPart targetItem, ConnectionPointUnity targetPoint, ConnectionPointUnity myPoint)
+        {
+            // make the connection permanent
+            // make sure to close the connection points
+            // reparent the item
+            if (!ConnectionPairs.ContainsKey(myPoint))
+            {
+                // double check we are able to do this
+                if(!targetItem.RequestedConnection(targetPoint))
+                {
+                    Debug.LogError($"Connection was not made between {myPoint.name} and {targetPoint.name}");
+                    return false;
+                }
+                // remove my point from the list of connection points that I have left open
+                InternalAvailableConnections.Remove(myPoint);
+                // update the connection points
+                myPoint.AddConnectionPoint(targetPoint);
+                targetPoint.AddConnectionPoint(myPoint);
+               
+                ConnectionPairs.Add(myPoint, targetItem);
+
+                //are we statically locked?
+                //check our parent or targetItem in this case
+                if (targetItem.ConnectedLockedInPlace)
+                {
+                    //then we are
+                    connectedLockedInPlace = true;
+                }
+                //OnConnectionMade?.Invoke(this, myPoint, targetItem, targetPoint);
+                return true;
+            }
+            else
+            {
+                Debug.LogError($"My connection point is already in the dictionary... {myPoint.name}");
+                return false;
+            }
+        }
         private void OnPartConnectionFail(ConnectionPart item, ConnectionPointUnity connetionPoint, ConnectionPart targetItem, ConnectionPointUnity targetPoint)
         {
             Debug.LogWarning($"{this.gameObject.name} got the call back for connection failed=> {item.gameObject.name} with {targetItem.gameObject.name} was not connected!");
@@ -923,7 +798,6 @@ namespace FuzzPhyte.Tools.Connections
         /// <param name="pointToFree"></param>
         public void RemoveConnection(ConnectionPointUnity pointToFree)
         {
-            
             //John still need code here
 
             if (ConnectionPairs.ContainsKey(pointToFree))
@@ -940,12 +814,119 @@ namespace FuzzPhyte.Tools.Connections
                 ConnectionPairs.Remove(pointToFree);
                 OnPartDisconnect(this, pointToFree, otherItem, pointToFree.OtherConnection);
             }
-            
-        } 
+        }
+        
+        private void OnPartDisconnect(ConnectionPart item, ConnectionPointUnity connectionPoint, ConnectionPart targetItem, ConnectionPointUnity targetPoint)
+        {
+            //turn on the associated triggers for those endpoints
+        }
         /// <summary>
-        /// Returns a List of Open or !IsConnected Connection Points
+        /// Called from the other end - syncing the trigger states for turning them off/on
         /// </summary>
-        /// <returns></returns>
+        /// <param name="thePointToCheck"></param>
+        public void OnPipeConnectionRequest(ConnectionPart otherPart, ConnectionPart theItemToCheck, ConnectionPointUnity thePointToCheck, ConnectionPointUnity myPointTrigger)
+        {
+            GameObject cPGameObject = null;
+            var nameOfOtherPart = otherPart.gameObject.name;
+            var nameOfMyConnection = myPointTrigger.gameObject.name;
+            var nameOfOtherConnection = thePointToCheck.gameObject.name;
+            Debug.Log($"On Pipe Connection Request running on {this.gameObject.name}, Name of The Other Part: {nameOfOtherPart} | Name of Other Connection = {nameOfOtherConnection} | Name of my Connection = {nameOfMyConnection}");
+            if (ConnectionPointsTriggersLookUp.ContainsKey(thePointToCheck))
+            {
+                ConnectionPointsTriggersLookUp[thePointToCheck].SetActiveTrigger(false);
+                cPGameObject = ConnectionPointsTriggersLookUp[thePointToCheck].gameObject;
+                thePointToCheck.ForceOtherClearConnection();
+                //possibleTarget = null;
+            }
+            if (cPGameObject != null)
+            {
+                Debug.LogWarning($"Turned off the trigger on {cPGameObject.name}!");
+            }
+            // copy data first
+            CopyIncomingData(theItemToCheck, thePointToCheck, myPointTrigger);
+
+            // clean up
+            // remove all listeners?
+            foreach (var cp in ConnectionPointTriggersListeners)
+            {
+                cp.OnPartTriggerEnterAction -= OnConnectionPointTriggerEnter;
+                cp.OnPartTriggerExitAction -= OnConnectionPointTriggerExit;
+            }
+            ConnectionPointTriggersListeners.Clear();
+            ConnectionPointsTriggersLookUp.Clear();
+
+            // move all bolts
+            
+            List<ConnectionFixed> theBoltList = new List<ConnectionFixed>();
+            int childCount = otherPart.FixedAttachedParent.childCount;
+            for (int i = 0; i < childCount; i++)
+            {
+                var otherBolt = otherPart.FixedAttachedParent.GetChild(i);
+                //clear the other listeners
+                otherBolt.GetComponent<ConnectionFixed>().OnPartConnectionFixedToolFinished -= otherPart.OnFixedWeldedToolEnd;
+                //add my listener to it
+                otherBolt.GetComponent<ConnectionFixed>().OnPartConnectionFixedToolFinished += OnFixedWeldedToolEnd;
+                theBoltList.Add(otherBolt.GetComponent<ConnectionFixed>());
+                otherBolt.GetComponent<ConnectionFixed>().FixedAssociatedConnectionPoint = myPointTrigger;
+            }
+            foreach (var aBolt in theBoltList)
+            {
+                aBolt.transform.SetParent(FixedAttachedParent);
+            }
+
+            //clear /replace bolt dictionary
+
+            if (WeldsByPoint.ContainsKey(myPointTrigger))
+            {
+                WeldsByPoint[myPointTrigger] = theBoltList;
+            }
+            else
+            {
+                WeldsByPoint.Add(myPointTrigger, theBoltList);
+            }
+            
+            // clean up internal connection list InternalAvailableConnections and drop myPointTrigger
+            if (InternalAvailableConnections.Contains(myPointTrigger))
+            {
+                InternalAvailableConnections.Remove(myPointTrigger);
+                myPointTrigger.GetComponent<ConnectionToolTrigger>().SetActiveTrigger(false);
+            }
+            if (InternalAvailableConnections.Contains(thePointToCheck))
+            {
+                InternalAvailableConnections.Remove(thePointToCheck);
+                thePointToCheck.GetComponent<ConnectionToolTrigger>().SetActiveTrigger(false);
+            }
+            // re-add our triggers based on the updated data from ThePipe
+            for (int i = 0; i < MyConnectionPoints.Count; i++)
+            {
+                var aPoint = MyConnectionPoints[i];
+                Debug.LogWarning($"Readding Triggers: {aPoint.gameObject.name}");
+                if (aPoint.gameObject.GetComponent<ConnectionToolTrigger>() != null)
+                {
+                    var cpTrigger = aPoint.gameObject.GetComponent<ConnectionToolTrigger>();
+                    ConnectionPointsTriggersLookUp.Add(aPoint, cpTrigger);
+                    ConnectionPointTriggersListeners.Add(cpTrigger);
+                    // add listener functions to the triggers
+
+                    cpTrigger.OnPartTriggerEnterAction += OnConnectionPointTriggerEnter;
+                    cpTrigger.OnPartTriggerExitAction += OnConnectionPointTriggerExit;
+
+                    aPoint.UpdateConnectableItem(this);
+                    Debug.LogWarning($"Setting the connect item to {theItemToCheck.gameObject.name} on {aPoint.gameObject.name} and registered the trigger: {cpTrigger.gameObject.name}!");
+                }
+                else
+                {
+                    Debug.LogError($"I am missing an OVRToolTrigger on {aPoint.gameObject.name}!");
+                }
+            }
+            // lets now blast the other item and my Trigger
+
+            StartCoroutine(DestroyOneFrameLater(myPointTrigger.gameObject));
+            StartCoroutine(DestroyOneFrameLater(thePointToCheck.gameObject));
+            StartCoroutine(DestroyOneFrameLater(otherPart.gameObject));
+            //this.possibleTarget = null;
+            Debug.LogWarning($"Destroyed {nameOfOtherPart}, is this other ConnectableItem still around? {theItemToCheck.gameObject.name}| I Also got rid of {nameOfMyConnection}");
+        }
         /// <summary>
         /// Recursively retrieves a list of open ConnectionPointUnity objects, including those from connected items.
         /// </summary>
@@ -969,6 +950,29 @@ namespace FuzzPhyte.Tools.Connections
             return openConnectionPoints;
         }
         #endregion
+        #endregion
+        #region New Connecting System From data
+        //we have visuals
+        //we have colliders
+        //on the collider is the FP_CollideItem = which needs to be updated via MoveRotateItem
+        //we have connection points
+        //listeners
+        /*
+        ConnectionPointTriggersListeners
+        var cpu = prefabSpawned.GetComponent<ConnectionPointUnity>();
+        foreach (var cp in ConnectionPointTriggersListeners)
+            {
+                cp.OnPartTriggerEnterAction += OnConnectionPointTriggerEnter;
+                cp.OnPartTriggerExitAction += OnConnectionPointTriggerExit;
+                cp.gameObject.name = $"{GetUniqueIndexPos}_{cp.gameObject.name}";
+            }
+        */
+        //we have aligned AlignmentConnectionPointPair & PossibleTargetByPoint
+        //order of operations
+        // 1. ID who is the parent, deactivate all major systems on other (child)
+        // 1.1 turn off Connection Part, FP_MoveRotateItem, go to the ConnectionPtParent - disable it
+        // 2. move other (child) to ConnectionFixedParent
+
         #endregion
     }
 }
