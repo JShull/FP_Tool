@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 8968776449024578588}
   - component: {fileID: 3226424010135874951}
   - component: {fileID: 4446467107676056280}
+  - component: {fileID: 1188616911157842732}
   m_Layer: 0
   m_Name: ConnectionPointUnity_0
   m_TagString: PartConnectionPoint
@@ -139,3 +140,16 @@ MonoBehaviour:
   OnTriggerStayValid:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &1188616911157842732
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1830916329416036123}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6faf8f333a6ed43f6bc16842a3fa4d1d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  MoveRotateItem: {fileID: 0}

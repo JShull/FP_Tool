@@ -27,6 +27,8 @@ namespace FuzzPhyte.Tools.Connections
         public UnityEvent OnAlignmentSuccessEvent;
         public UnityEvent OnTriggerEnterUnityEvent;
         public UnityEvent OnTriggerExitUnityEvent;
+        public UnityEvent OnPartLockedEvent;
+        public UnityEvent OnPartUnlockedEvent;
         [Tooltip("List of ConnectionToolTrigger listeners that we're monitoring/responsible for")]
         protected List<ConnectionToolTrigger> ConnectionPointTriggersListeners = new List<ConnectionToolTrigger>();
         public Dictionary<ConnectionPointUnity, ConnectionToolTrigger> ConnectionPointsTriggersLookUp = new Dictionary<ConnectionPointUnity, ConnectionToolTrigger>();
@@ -49,7 +51,9 @@ namespace FuzzPhyte.Tools.Connections
                 
                 //get component
                 var cpu = prefabSpawned.GetComponent<ConnectionPointUnity>();
-                if(cpu != null)
+                var fpCollide = prefabSpawned.GetComponent<FP_CollideItem>();
+                var myFPMoveRotate = this.GetComponent<FP_MoveRotateItem>();
+                if (cpu != null)
                 {
                     prefabSpawned.gameObject.name = curPointData.connectionType.ToString()+"_"+i;
                     cpu.SetupDataFromDataFile(this, curPointData);
@@ -69,7 +73,10 @@ namespace FuzzPhyte.Tools.Connections
                 {
                     Debug.LogError($"This needs a ConnectionPointUnity script");
                 }
-
+                if (fpCollide != null && myFPMoveRotate!=null)
+                {
+                    fpCollide.MoveRotateItem = myFPMoveRotate;
+                }
             }
             
             myConnectionPoints.Clear();
@@ -128,6 +135,11 @@ namespace FuzzPhyte.Tools.Connections
         /// </summary>
         public override bool ActivateTool()
         {
+            //check lock state before we go any further
+            if (CurrentState== FPToolState.Locked)
+            {
+                return false;
+            }
             if (base.ActivateTool())
             {
                 ToolIsCurrent = true;
@@ -140,6 +152,30 @@ namespace FuzzPhyte.Tools.Connections
             if (base.DeactivateTool())
             {
                 ToolIsCurrent = false;
+                return true;
+            }
+            return false;
+        }
+        public override bool LockTool()
+        {
+            if(base.LockTool())
+            {
+                ToolIsCurrent = false;
+                OnPartLockedEvent.Invoke();
+                return true;
+            }
+            return false;
+        }
+        /// <summary>
+        /// Dont call this function from external sources
+        /// </summary>
+        /// <returns></returns>
+        public override bool UnlockTool()
+        {
+            //check our conditions
+            if(base.UnlockTool())
+            {
+                OnPartUnlockedEvent.Invoke();
                 return true;
             }
             return false;
@@ -172,12 +208,13 @@ namespace FuzzPhyte.Tools.Connections
         public void PointerDown(PointerEventData eventData)
         {
             //throw new System.NotImplementedException();
-            ActivateTool();
-            if (StartTool())
+            if (ActivateTool())
             {
-                Debug.Log($"{this.gameObject.name}: ConnectionPart.cs Pointer DOWN");
+                if (StartTool())
+                {
+                    Debug.Log($"{this.gameObject.name}: ConnectionPart.cs Pointer DOWN");
+                }
             }
-            
         }
         /// <summary>
         /// Unity Event Wrapper tied to the PointerEventData class
@@ -186,6 +223,10 @@ namespace FuzzPhyte.Tools.Connections
         /// <param name="pointerEvent"></param>
         public void PointerUp(PointerEventData eventData)
         {
+            if(!ToolIsCurrent)
+            {
+                return;
+            }
             Debug.Log($"{this.gameObject.name}: Pointer UP");
             // see if we had a possible pipe target
             // possible target comes in from the trigger events
@@ -239,6 +280,10 @@ namespace FuzzPhyte.Tools.Connections
         }
         public void PointerDrag(PointerEventData eventData)
         {
+            if (!ToolIsCurrent)
+            {
+                return;
+            }
             if (UseTool())
             {
                 //Debug.Log($"{this.gameObject.name}: ConnectionPart.cs Pointer DRAG");
@@ -951,7 +996,98 @@ namespace FuzzPhyte.Tools.Connections
         }
         #endregion
         #endregion
+        #region Quick Connection Mode
+        public bool UILockItem(ConnectionPointUnity incomingPoint)
+        {
+            // now we need to make sure that our connection points that are "aligned" with incomingPoint is in a state of off as well as it's state of motion
+            var keysToJointPairs = AlignmentConnectionPointPair.Keys.ToList();
+            for (int i = 0; i < keysToJointPairs.Count; i++)
+            {
+                var curKey = keysToJointPairs[i];
+                var curValue = AlignmentConnectionPointPair[curKey];
+                if (curValue == incomingPoint)
+                {
+                    //lock the joint back to it's normal state which will immediately realign on next frame
+                    //lock both ConnectionToolTriggers and break out
+                    incomingPoint.MyToolTriggerRef.SetActiveTrigger(false);
+                    incomingPoint.AddConnectionPoint(curKey);
+                    //my point
+                    curKey.MyToolTriggerRef.SetActiveTrigger(false);
+                    curKey.AddConnectionPoint(incomingPoint);
+                    //request my other connected part to lock as well - we always lock our other part
+                    incomingPoint.TheConnectionPart.LockTool();
+                    // lockmyself
+                    return LockTool();
+                }
+            }
+            return false;
+        }
+        /// <summary>
+        /// This should be the main way to request an unlock via a connectionPointUnity ref
+        /// </summary>
+        /// <param name="incomingPoint"></param>
+        public bool UIUnlockItem(ConnectionPointUnity incomingPoint)
+        {
+            if(CurrentState == FPToolState.Locked)
+            {
+               
+                // now we need to make sure that our connection points that are "aligned" with incomingPoint is in a state of on
+                // we were successful in locking
+                // now we need to make sure that our connection points that are "aligned" with incomingPoint is in a state of off
+                var keysToJointPairs = AlignmentConnectionPointPair.Keys.ToList();
+                for (int i = 0; i < keysToJointPairs.Count; i++)
+                {
+                    var curKey = keysToJointPairs[i];
+                    var curValue = AlignmentConnectionPointPair[curKey];
+                    if (curValue == incomingPoint)
+                    {
+                        //lock the joint back to it's normal state which will immediately realign on next frame
+                        //lock both ConnectionToolTriggers and break out
+                        incomingPoint.RemoveConnectionPoint(curKey, false);
+                        incomingPoint.MyToolTriggerRef.SetActiveTrigger(true);
+                        //my point
+                        curKey.RemoveConnectionPoint(incomingPoint, false);
+                        curKey.MyToolTriggerRef.SetActiveTrigger(true);
+                        //request an unlock now for both my incoming and myself
+                        incomingPoint.TheConnectionPart.IncomingUnlockRequest();
+                        IncomingUnlockRequest();
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+        /// <summary>
+        /// Unlocking by external request gets funny because we need to check all of our coneciton points not just the one
+        /// </summary>
+        public void IncomingUnlockRequest() 
+        {
+            // we need to check our ConnectionPointUnity and specifically look for ConnectionPointStatusPt
+            var myConnectionPoints = ConnectionPointsTriggersLookUp.Keys.ToList();
+            for(int i =0; i < myConnectionPoints.Count; i++)
+            {
+                var curConnectionPoint = myConnectionPoints[i];
+                if(curConnectionPoint.ConnectionPointStatusPt == ConnectionPointStatus.Connected)
+                {
+                    // we need to unlock the trigger
+                    // if just one point is stil on a connected state we need to not unlock
+                    return;
+                }
+            }
+            //none of our connection points are in a connected state so we can actually unlock
+            if (UnlockTool())
+            {
+                Debug.LogWarning($"We were able to unlock:{this.gameObject.name}");
+            }
+        }
+        // just need to have a way to lock the item
+        // turn off all high level moving/rotating
+        // maintain other items
+        // needs to relay information to the ConnectionPointUnity to let it know that it's not looking for connections
+
+        #endregion
         #region New Connecting System From data
+        //much more exhaustive approach - going to leave this alone for now 4-10
         //we have visuals
         //we have colliders
         //on the collider is the FP_CollideItem = which needs to be updated via MoveRotateItem

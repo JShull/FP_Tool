@@ -23,3 +23,4 @@ MonoBehaviour:
   measurementPrecision: 2
   MeasurementFontSetting: {fileID: 11400000, guid: 2cc2e3b5d55cd4d54b7c35064592e4d7, type: 2}
   MeasurementPointPrefab: {fileID: 716873236662534562, guid: add168a3fd376c649a7f2bee7f4d54c5, type: 3}
+  RaycastMax: 50

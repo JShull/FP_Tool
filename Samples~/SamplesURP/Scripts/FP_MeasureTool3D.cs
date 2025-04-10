@@ -3,7 +3,6 @@ namespace FuzzPhyte.Tools.Samples
     using UnityEngine;
     using UnityEngine.EventSystems;
     using FuzzPhyte.Utility;
-    using System.Collections;
     using System.Collections.Generic;
     using UnityEngine.Events;
 
@@ -14,7 +13,7 @@ namespace FuzzPhyte.Tools.Samples
     public class FP_MeasureTool3D : FP_Tool<FP_MeasureToolData>, IFPUIEventListener<FP_Tool<FP_MeasureToolData>>
     {
         public Transform ParentDecals;
-        public float RaycastMaxDistance = 20f;
+        //public float RaycastMaxDistance = 20f;
         [Tooltip("We are 2D casting into 3D Space - this RectTransform is our boundary")]
         [SerializeField] protected RectTransform measurementParentSpace;
         [Header("Unity Events")]
@@ -48,6 +47,7 @@ namespace FuzzPhyte.Tools.Samples
         {
             ForceDeactivateTool();
         }
+        #region State Actions & OnUIEvent
         public override bool DeactivateTool()
         {
             if(base.DeactivateTool())
@@ -81,6 +81,23 @@ namespace FuzzPhyte.Tools.Samples
             if(base.ForceDeactivateTool())
             {
                 ToolIsCurrent = false;
+                return true;
+            }
+            return false;
+        }
+        public override bool LockTool()
+        {
+            if (base.LockTool())
+            {
+                ToolIsCurrent = false;
+                return true;
+            }
+            return false;
+        }
+        public override bool UnlockTool()
+        {
+            if (base.UnlockTool())
+            {
                 return true;
             }
             return false;
@@ -142,7 +159,7 @@ namespace FuzzPhyte.Tools.Samples
                     var direction = (PointData.Item2 - ToolCamera.transform.position).normalized;
                     Ray ray = new Ray(ToolCamera.transform.position, direction);
                     Debug.LogWarning($"Ray: {ray.origin} | {ray.direction}");
-                    Debug.DrawRay(ray.origin, ray.direction * RaycastMaxDistance, FP_UtilityData.ReturnColorByStatus(SequenceStatus.Unlocked), 10f);
+                    Debug.DrawRay(ray.origin, ray.direction * toolData.RaycastMax, FP_UtilityData.ReturnColorByStatus(SequenceStatus.Unlocked), 10f);
                     Debug.DrawRay(PointData.Item2,Vector3.up,Color.red,9f);
                     //
                     
@@ -236,6 +253,7 @@ namespace FuzzPhyte.Tools.Samples
                 }
             }
         }
+        
         public void ResetVisuals()
         {
             ForceDeactivateTool();
@@ -246,6 +264,7 @@ namespace FuzzPhyte.Tools.Samples
             }
             allMeasuredLines.Clear();
         }
+        #endregion
         protected void UpdateMeasurementText()
         {
             float distance = Vector3.Distance(startPosition, endPosition);

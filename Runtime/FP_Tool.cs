@@ -4,7 +4,7 @@ namespace FuzzPhyte.Tools
     using FuzzPhyte.Utility;
     using System;
     using System.Collections.Generic;
-    public abstract class FP_Tool<T> : MonoBehaviour,IFPTool 
+    public abstract class FP_Tool<T> : MonoBehaviour, IFPTool 
         where T : FP_Data
     {
         [SerializeField]
@@ -18,6 +18,8 @@ namespace FuzzPhyte.Tools
         public event Action<FP_Tool<T>> OnActiveUse;
         public event Action<FP_Tool<T>> OnEnding;
         public event Action<FP_Tool<T>> OnDeactivated;
+        public event Action<FP_Tool<T>> OnLocked;
+        public event Action<FP_Tool<T>> OnUnlocked;
 
         [Tooltip("This is an interrupt flag to let us ignore")]
         public bool ToolIsCurrent;
@@ -26,11 +28,13 @@ namespace FuzzPhyte.Tools
         // Dictionary defining allowed transitions
         protected Dictionary<FPToolState, HashSet<FPToolState>> allowedTransitions = new Dictionary<FPToolState, HashSet<FPToolState>>
         {
-            { FPToolState.Deactivated, new HashSet<FPToolState> { FPToolState.Activated,    FPToolState.Deactivated } },
-            { FPToolState.Activated,   new HashSet<FPToolState> { FPToolState.Starting,     FPToolState.Deactivated } },
-            { FPToolState.Starting,    new HashSet<FPToolState> { FPToolState.ActiveUse,    FPToolState.Deactivated } },
-            { FPToolState.ActiveUse,   new HashSet<FPToolState> { FPToolState.ActiveUse,    FPToolState.Ending,         FPToolState.Deactivated } },
-            { FPToolState.Ending,      new HashSet<FPToolState> { FPToolState.Activated,    FPToolState.Deactivated } },
+            { FPToolState.Unlocked,    new HashSet<FPToolState> { FPToolState.Activated,    FPToolState.Locked,     FPToolState.Deactivated } },
+            { FPToolState.Locked,      new HashSet<FPToolState> { FPToolState.Unlocked,     FPToolState.Locked,     FPToolState.Deactivated } },
+            { FPToolState.Deactivated, new HashSet<FPToolState> { FPToolState.Activated,    FPToolState.Locked,     FPToolState.Deactivated } },
+            { FPToolState.Activated,   new HashSet<FPToolState> { FPToolState.Starting,     FPToolState.Locked,     FPToolState.Deactivated } },
+            { FPToolState.Starting,    new HashSet<FPToolState> { FPToolState.ActiveUse,    FPToolState.Locked,     FPToolState.Deactivated } },
+            { FPToolState.ActiveUse,   new HashSet<FPToolState> { FPToolState.ActiveUse,    FPToolState.Locked,     FPToolState.Ending,     FPToolState.Deactivated } },
+            { FPToolState.Ending,      new HashSet<FPToolState> { FPToolState.Activated,    FPToolState.Locked,     FPToolState.Deactivated } },
         };
 
         public virtual void Initialize(T data)
@@ -56,6 +60,14 @@ namespace FuzzPhyte.Tools
         {
             return SetState(FPToolState.Ending);
         }
+        public virtual bool LockTool()
+        {
+            return SetState(FPToolState.Locked);
+        }
+        public virtual bool UnlockTool() 
+        {
+            return SetState(FPToolState.Unlocked);
+        }
         public virtual bool DeactivateTool()
         {
             bool confirmDeactivation = SetState(FPToolState.Deactivated);
@@ -71,6 +83,10 @@ namespace FuzzPhyte.Tools
         public virtual bool ForceDeactivateTool()
         {
             return SetState(FPToolState.Deactivated);
+        }
+        public virtual FPToolState ReturnState()
+        {
+            return CurrentState;
         }
 
         protected virtual bool SetState(FPToolState newState)
@@ -97,6 +113,12 @@ namespace FuzzPhyte.Tools
                     return true;
                 case FPToolState.Deactivated:
                     OnDeactivated?.Invoke(this);
+                    return true;
+                case FPToolState.Locked:
+                    OnLocked?.Invoke(this);
+                    return true;
+                case FPToolState.Unlocked:
+                    OnUnlocked?.Invoke(this);
                     return true;
             }
             return false;

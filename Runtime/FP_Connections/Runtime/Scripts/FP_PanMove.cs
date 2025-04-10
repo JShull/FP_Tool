@@ -5,7 +5,7 @@ namespace FuzzPhyte.Tools.Connections
     using FuzzPhyte.Utility;
     using UnityEngine.EventSystems;
     using UnityEngine.Events;
-    using UnityEngine.UIElements;
+
 
     public class FP_PanMove : FP_Tool<PartData>, IFPUIEventListener<FP_Tool<PartData>>
     {
@@ -197,7 +197,7 @@ namespace FuzzPhyte.Tools.Connections
                 {
                     
                     //Debug.LogWarning($"Pointer DOWN Coordinates: {eventData.position} by pointer ID: {eventData.button}");
-                    Plane fPlane = new Plane(ForwardPlaneLocation.transform.forward*-1, ForwardPlaneLocation.position);
+                    Plane fPlane = new Plane(ForwardPlaneLocation.forward*-1, ForwardPlaneLocation.position);
                     FP_UtilityData.DrawLinePlane(ForwardPlaneLocation.position, ForwardPlaneLocation.forward * -1f,Color.green,2,10);
                     var PointData = FP_UtilityData.GetMouseWorldPositionOnPlane(ToolCamera,eventData.position,fPlane);
                     RaycastHit potentialHit;
@@ -225,20 +225,36 @@ namespace FuzzPhyte.Tools.Connections
                             selectedItem = selectedItemDetails.gameObject;
                             //update cached parameters
                             mouseForwardROTStartVector = ToolCamera.ScreenPointToRay(mouseDownStartScreenCoordinate).direction.normalized;
-                            //assuming we are facing z Forward going to jump the part forward
-                            selectedItem.transform.position = new Vector3(selectedItem.transform.position.x, selectedItem.transform.position.y, ForwardPlaneLocation.position.z);
-                            selectItemStartRotation = selectedItem.transform.rotation;
-                            localVectorOffsetFromPlanePoint = selectedItem.transform.position - PointData.Item2;
+                            
+                            
+                            
                             //we don't exactly know what sort of part we have here but we know that we can check the interface to pass our eventData now to the connection logic on the part
                             //this in theory grabs the one/only 'IFPUIEventListener' interface that is being used on the selectedItem object
                             //at this moment, this is casting through the interface and hitting 'ConnectionPart.cs' and we're just sending/passing our information over there
-                            selectedItemInterface = selectedItem.GetComponent<IFPUIEventListener<FP_Tool<PartData>>>();
+                            
+                            // can we move this item?
+                            var toolInterface = selectedItem.GetComponent<IFPTool>();
+                            if(toolInterface != null)
+                            {
+                                //if this is using the IFPTool interface we want to confirm we aren't in a locked state - everything else is fine
+                                if (toolInterface.ReturnState() == FPToolState.Locked)
+                                {
+                                    selectedItem = null;
+                                    return;
+                                }
+                            }
                             // did we find a tool/connection on this item part?
+                            selectedItemInterface = selectedItem.GetComponent<IFPUIEventListener<FP_Tool<PartData>>>();
+                            selectedItem.transform.position = new Vector3(selectedItem.transform.position.x, selectedItem.transform.position.y, ForwardPlaneLocation.position.z);
+                            selectItemStartRotation = selectedItem.transform.rotation;
+                            localVectorOffsetFromPlanePoint = selectedItem.transform.position - PointData.Item2;
                             if (selectedItemInterface != null)
                             {
                                 //basically this cast is going ot hit 'ConnectionPart.cs' and pass our event data directly into the PointerDown function
                                 selectedItemInterface.PointerDown(eventData);
                             }
+                            //assuming we are facing z Forward going to jump the part forward
+                            
                             //wrap up
                             isMoving = true;
                             selectedItemDetails.InteractionStarted();
@@ -269,12 +285,31 @@ namespace FuzzPhyte.Tools.Connections
             }
             if(UseTool())
             {
+                //check lock state
+                if (selectedItem != null)
+                {
+                    var toolInterface = selectedItem.GetComponent<IFPTool>();
+                    if (toolInterface != null)
+                    {
+                        //if this is using the IFPTool interface we want to confirm we aren't in a locked state - everything else is fine
+                        if (toolInterface.ReturnState() == FPToolState.Locked)
+                        {
+                            selectedItem = null;
+                            selectedItemInterface = null;
+                            return;
+                        }
+                    }
+                }
+                else
+                {
+                    return;
+                }
+
                 if (selectedItemInterface != null)
                 {
                     selectedItemInterface.PointerDrag(eventData);
                 }
                 //now update our position
-                if (selectedItem == null) return;
                 mouseCurrentScreenCoordinate = eventData.position;
                 Plane fPlane = new Plane(ToolCamera.transform.forward, ForwardPlaneLocation.position);
                 var PointData = FP_UtilityData.GetMouseWorldPositionOnPlane(ToolCamera, eventData.position, fPlane);
@@ -354,9 +389,46 @@ namespace FuzzPhyte.Tools.Connections
             }
             if (EndTool())
             {
+                //check our actual item to see if we somehow got locked while in some sort of manuever - HIGHLY Unlikely but still possible
+                if (selectedItem != null)
+                {
+                    var toolInterface = selectedItem.GetComponent<IFPTool>();
+                    if (toolInterface != null)
+                    {
+                        //if this is using the IFPTool interface we want to confirm we aren't in a locked state - everything else is fine
+                        if (toolInterface.ReturnState() == FPToolState.Locked)
+                        {
+                            DeactivateTool();
+                            selectedItem = null;
+                            selectedItemDetails = null;
+                            isMoving = false;
+                            useRotation = false;
+                            return;
+                        }
+                    }
+                }
+                else
+                {
+                    DeactivateTool();
+                    selectedItem = null;
+                    selectedItemDetails = null;
+                    isMoving = false;
+                    useRotation = false;
+                    return;
+                }
+                // check if we have our interface
                 if (selectedItemInterface != null)
                 {
                     selectedItemInterface.PointerUp(eventData);
+                }
+                else
+                {
+                    DeactivateTool();
+                    selectedItem = null;
+                    selectedItemDetails = null;
+                    isMoving = false;
+                    useRotation = false;
+                    return;
                 }
                 selectedItemDetails.InteractionEnded();
                 OnToolDropItemUnityEvent.Invoke();

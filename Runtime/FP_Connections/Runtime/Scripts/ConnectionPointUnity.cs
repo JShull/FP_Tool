@@ -28,6 +28,7 @@ namespace FuzzPhyte.Tools.Connections
         [SerializeField]
         private bool isConnected;
         public ConnectionPointUnity OtherConnection => otherConnection;
+        public ConnectionPointUnity OtherAlignedPoint => otherAlignedPoint;
         [SerializeField]
         List<Quaternion> validRotations = new List<Quaternion>();
         [SerializeField]

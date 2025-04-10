@@ -4,15 +4,7 @@ namespace FuzzPhyte.Tools
     using UnityEngine;
     using FuzzPhyte.Utility;
 
-    [Serializable]
-    public enum FPToolState
-    {
-        Deactivated = 0,
-        Activated = 1,
-        Starting = 2,
-        ActiveUse = 3,
-        Ending = 9
-    }
+    
     /// <summary>
     /// Generic Tool Listener setup with Functions tied to state of the tool
     /// </summary>

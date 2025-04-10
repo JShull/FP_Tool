@@ -1,4 +1,4 @@
-namespace FuzzPhyte.Tools
+namespace FuzzPhyte.Tools.Samples
 {
     using FuzzPhyte.Utility;
     using UnityEngine;
@@ -18,5 +18,6 @@ namespace FuzzPhyte.Tools
         public float measurementPrecision = 2f; // Decimal places
         public FontSetting MeasurementFontSetting;
         public GameObject MeasurementPointPrefab;
+        public float RaycastMax = 15;
     }
 }
