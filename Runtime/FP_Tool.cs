@@ -84,6 +84,7 @@ namespace FuzzPhyte.Tools
         {
             return SetState(FPToolState.Deactivated);
         }
+        public virtual void DeactivateToolFromUI(){}
         public virtual FPToolState ReturnState()
         {
             return CurrentState;

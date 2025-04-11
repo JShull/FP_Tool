@@ -316,7 +316,15 @@ namespace FuzzPhyte.Tools.Connections
                 }
                 otherConnection = null;
             }
-            ConnectionPointStatusPt = ConnectionPointStatus.None;
+            if(otherAlignedPoint == connectionPointUnity)
+            {
+                //we are aligned and we want to fall back to this state
+                ConnectionPointStatusPt = ConnectionPointStatus.Aligned;
+            }else
+            {
+                ConnectionPointStatusPt = ConnectionPointStatus.None;
+            }
+            
         }
         public void ForceOtherClearConnection()
         {

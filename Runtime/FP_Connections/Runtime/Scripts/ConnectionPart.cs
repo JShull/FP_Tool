@@ -1026,11 +1026,10 @@ namespace FuzzPhyte.Tools.Connections
         /// This should be the main way to request an unlock via a connectionPointUnity ref
         /// </summary>
         /// <param name="incomingPoint"></param>
-        public bool UIUnlockItem(ConnectionPointUnity incomingPoint)
+        public bool UIAttemptUnlockItem(ConnectionPointUnity incomingPoint)
         {
             if(CurrentState == FPToolState.Locked)
             {
-               
                 // now we need to make sure that our connection points that are "aligned" with incomingPoint is in a state of on
                 // we were successful in locking
                 // now we need to make sure that our connection points that are "aligned" with incomingPoint is in a state of off
@@ -1050,8 +1049,7 @@ namespace FuzzPhyte.Tools.Connections
                         curKey.MyToolTriggerRef.SetActiveTrigger(true);
                         //request an unlock now for both my incoming and myself
                         incomingPoint.TheConnectionPart.IncomingUnlockRequest();
-                        IncomingUnlockRequest();
-                        return true;
+                        return IncomingUnlockRequest();
                     }
                 }
             }
@@ -1060,7 +1058,7 @@ namespace FuzzPhyte.Tools.Connections
         /// <summary>
         /// Unlocking by external request gets funny because we need to check all of our coneciton points not just the one
         /// </summary>
-        public void IncomingUnlockRequest() 
+        public bool IncomingUnlockRequest() 
         {
             // we need to check our ConnectionPointUnity and specifically look for ConnectionPointStatusPt
             var myConnectionPoints = ConnectionPointsTriggersLookUp.Keys.ToList();
@@ -1071,14 +1069,16 @@ namespace FuzzPhyte.Tools.Connections
                 {
                     // we need to unlock the trigger
                     // if just one point is stil on a connected state we need to not unlock
-                    return;
+                    return false;
                 }
             }
             //none of our connection points are in a connected state so we can actually unlock
             if (UnlockTool())
             {
                 Debug.LogWarning($"We were able to unlock:{this.gameObject.name}");
+                return true;
             }
+            return false;
         }
         // just need to have a way to lock the item
         // turn off all high level moving/rotating

@@ -52,7 +52,7 @@ namespace FuzzPhyte.Tools.Samples
             }
             allMeasuredLines.Clear();
         }
-        public void DeactivateToolFromUI()
+        public override void DeactivateToolFromUI()
         {
             ForceDeactivateTool();
         }

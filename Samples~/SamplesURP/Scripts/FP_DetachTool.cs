@@ -9,21 +9,18 @@ namespace FuzzPhyte.Tools.Samples
     using System.Collections.Generic;
 
     [RequireComponent(typeof(RectTransform))]
-    public class FP_AttachTool : FP_Tool<FP_AttachToolData>, IFPUIEventListener<FP_Tool<FP_AttachToolData>>
+    public class FP_DetachTool :FP_Tool<FP_DetachToolData>, IFPUIEventListener<FP_Tool<FP_DetachToolData>>
     {
         protected ConnectionPointUnity selectedItemCPU;
         protected ConnectionPointUnity selectedOtherItemCPU;
+        public FP_AttachTool TheAttachTool;
         protected Vector3 worldSelectedLocation;
-        
         [SerializeField] protected RectTransform measurementParentSpace;
-        
         public Transform ForwardPlaneLocation;
-        public UnityEvent OnAttachToolActivated;
-        public UnityEvent OnAttachToolDown;
-        public UnityEvent OnAttachToolDownError;
-        public UnityEvent OnAttachToolUp;
-        public Dictionary<ConnectionPointUnity,GameObject> AllAttachedVisuals = new Dictionary<ConnectionPointUnity, GameObject>();
-        
+        public UnityEvent OnDetachToolActivated;
+        public UnityEvent OnDetachToolDown;
+        public UnityEvent OnDetachToolDownError;
+        public UnityEvent OnDetachToolUp;
         public void Start()
         {
             if (measurementParentSpace==null)
@@ -35,7 +32,6 @@ namespace FuzzPhyte.Tools.Samples
                 Debug.LogError($"missing tool data");
                 return;
             }
-
         }
         public override void DeactivateToolFromUI()
         {
@@ -63,7 +59,7 @@ namespace FuzzPhyte.Tools.Samples
             if (base.ActivateTool())
             {
                 ToolIsCurrent = true;
-                OnAttachToolActivated.Invoke();
+                OnDetachToolActivated.Invoke();
                 return true;
             }
             Debug.LogWarning($"Didn't activate the tool?");
@@ -78,7 +74,7 @@ namespace FuzzPhyte.Tools.Samples
             }
             return false;
         }
-        public void OnUIEvent(FP_UIEventData<FP_Tool<FP_AttachToolData>> eventData)
+        public void OnUIEvent(FP_UIEventData<FP_Tool<FP_DetachToolData>> eventData)
         {
             //Debug.LogWarning($"OnUIEvent was processed {eventData.EventType} {eventData.AdditionalData} {this} {ToolIsCurrent}");
             if (!ToolIsCurrent)
@@ -132,26 +128,26 @@ namespace FuzzPhyte.Tools.Samples
 
                     if (potentialHit.collider != null) 
                     {
-                        Debug.LogWarning($"ATTACH TOOL | Potential Hit: {potentialHit.collider.gameObject.name}");
+                        Debug.LogWarning($"DETACH TOOL | Potential Hit: {potentialHit.collider.gameObject.name}");
                         var collideItem = potentialHit.collider.gameObject.GetComponent<FP_CollideItem>();
                         if (collideItem != null)
                         {
-                            Debug.LogWarning($"Hit a CollideItem | Potential Hit: {collideItem.gameObject.name}");
+                            Debug.LogWarning($"DETACH TOOL | Hit a CollideItem | Potential Hit: {collideItem.gameObject.name}");
                             var cpu = collideItem.GetComponent<ConnectionPointUnity>();
                             if (cpu != null)
                             {
-                                Debug.LogWarning($"Found a CPU | Potential Hit: {cpu.gameObject.name}, is it aligned? | {cpu.ConnectionPointStatusPt}");
+                                Debug.LogWarning($"DETACH TOOL | Found a CPU | Potential Hit: {cpu.gameObject.name}, is it aligned? | {cpu.ConnectionPointStatusPt}");
                                 //now lets see what our state is in
-                                if (cpu.ConnectionPointStatusPt == ConnectionPointStatus.Aligned)
+                                if (cpu.ConnectionPointStatusPt == ConnectionPointStatus.Connected)
                                 {
                                     //now see if our cpu has a buddy
-                                    if (cpu.OtherAlignedPoint != null)
+                                    if (cpu.OtherConnection != null)
                                     {
-                                        selectedOtherItemCPU = cpu.OtherAlignedPoint;
+                                        selectedOtherItemCPU = cpu.OtherConnection;
                                         selectedItemCPU = cpu;
                                         worldSelectedLocation = potentialHit.point;
-                                        Debug.LogWarning($"We are good! | {selectedItemCPU.gameObject.name} is aligned with {selectedOtherItemCPU.gameObject.name}");
-                                        OnAttachToolDown.Invoke();
+                                        Debug.LogWarning($"We are able to detach! | {selectedItemCPU.gameObject.name} is connected with {selectedOtherItemCPU.gameObject.name}");
+                                        OnDetachToolDown.Invoke();
                                         if (UseTool())
                                         {
                                             //just need to force this because of how drag/works
@@ -160,13 +156,11 @@ namespace FuzzPhyte.Tools.Samples
                                         return;
                                     }
                                     else
-                                    {
-                                        
+                                    { 
                                     }
                                 }
                                 else
                                 {
-                                   
                                 }
                             }
                         }
@@ -176,7 +170,7 @@ namespace FuzzPhyte.Tools.Samples
                     {
 
                     }
-                    OnAttachToolDownError.Invoke();
+                    OnDetachToolDownError.Invoke();
                 }
             }
         }
@@ -195,7 +189,7 @@ namespace FuzzPhyte.Tools.Samples
         }
         public void PointerUp(PointerEventData eventData)
         {
-            Debug.Log($"On Pointer up");
+            Debug.Log($"Detach tool: On Pointer up");
             if (!ToolIsCurrent)
             {
                 return;
@@ -208,19 +202,20 @@ namespace FuzzPhyte.Tools.Samples
                 {
                     if(selectedItemCPU!=null && selectedOtherItemCPU != null)
                     {
-                        Debug.LogWarning($"Go for lock?");
-                        selectedItemCPU.TheConnectionPart.UILockItem(selectedOtherItemCPU);
-                        if (toolData.AttachVisual != null)
+                        Debug.LogWarning($"Go for detach!?");
+                        var UnlockSuccess = selectedItemCPU.TheConnectionPart.UIAttemptUnlockItem(selectedOtherItemCPU);
+                        var success = TheAttachTool.RequestDetachDataSync(selectedItemCPU,selectedOtherItemCPU);
+                        if(success)
                         {
-                            if(!AllAttachedVisuals.ContainsKey(selectedItemCPU))
-                            {
-                                var spawnedVisual = GameObject.Instantiate(toolData.AttachVisual, worldSelectedLocation, Quaternion.identity);
-                                spawnedVisual.name = "AttachedVisual_";
-                                AllAttachedVisuals.Add(selectedItemCPU,spawnedVisual);
-                            }
+                            Debug.LogWarning($"Detach was a success and it's been removed");
+                            OnDetachToolUp.Invoke();
                         }
-                        OnAttachToolUp.Invoke();
+                        if(UnlockSuccess)
+                        {
+                            Debug.LogWarning($"Looks like this removal also unlocked the part!");
+                        }
                     }
+                    //reset
                     selectedItemCPU = null;
                     selectedOtherItemCPU = null;
                     worldSelectedLocation = Vector3.zero;
@@ -229,35 +224,16 @@ namespace FuzzPhyte.Tools.Samples
             }
             else
             {
-                DeactivateTool();
                 //reset
                 selectedItemCPU = null;
                 selectedOtherItemCPU = null;
                 worldSelectedLocation = Vector3.zero;
+                DeactivateTool();
             }
         }
         public void ResetVisuals()
         {
             
-        }
-        public bool RequestDetachDataSync(ConnectionPointUnity cpu, ConnectionPointUnity otherCPU)
-        {
-            if (AllAttachedVisuals.ContainsKey(cpu))
-            {
-                Destroy(AllAttachedVisuals[cpu]);
-                AllAttachedVisuals.Remove(cpu);
-                return true;
-            }else
-            {
-                //lets try other one
-                if(AllAttachedVisuals.ContainsKey(otherCPU))
-                {
-                    Destroy(AllAttachedVisuals[otherCPU]);
-                    AllAttachedVisuals.Remove(otherCPU);
-                    return true;
-                }
-            }
-            return false;
         }
     }
 }

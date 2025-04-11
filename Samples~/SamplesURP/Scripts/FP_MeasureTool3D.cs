@@ -43,7 +43,7 @@ namespace FuzzPhyte.Tools.Samples
         /// <summary>
         /// Some additional UI reference to deactivate something if we needed it
         /// </summary>
-        public void DeactivateToolFromUI()
+        public override void DeactivateToolFromUI()
         {
             ForceDeactivateTool();
         }
