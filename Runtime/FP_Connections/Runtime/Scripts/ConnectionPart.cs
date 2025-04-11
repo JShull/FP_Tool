@@ -542,6 +542,28 @@ namespace FuzzPhyte.Tools.Connections
                 }
             }
         }
+        /// <summary>
+        /// Called for updating connection point data and shifting the visuals
+        /// </summary>
+        /// <param name="newConnectionData"></param>
+        /// <param name="localOffsetForVisuals"></param>
+        /// <returns></returns>
+        public bool UpdateConnectionPointLocations(List<ConnectionPointData>newConnectionData,Vector3 localOffsetForVisuals) 
+        {
+            //move the new connection data points based on the data
+            MyVisualItem.transform.localPosition = localOffsetForVisuals;
+            if (newConnectionData.Count != MyConnectionPoints.Count)
+            {
+                Debug.LogError($"New Connection Data does not match the number of connection points");
+                return false;
+            }
+            for (int i=0;i< MyConnectionPoints.Count; i++)
+            {
+                var cpuExisting = MyConnectionPoints[i];
+                cpuExisting.SetupDataFromDataFile(this, newConnectionData[i]);
+            }
+            return true;
+        }
         #endregion
         #region Alignment Related
         /// <summary>
