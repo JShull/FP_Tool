@@ -331,7 +331,7 @@ namespace FuzzPhyte.Tools.Connections
                         Vector3 rotationAxis = Vector3.up;
                         float snappedAngleRot = 0;
                         float changeDirection = 1;
-                        if(eventData.button== PointerEventData.InputButton.Middle)
+                        if(eventData.button== PointerEventData.InputButton.Right)
                         {
                             rotationAxis = ToolCamera.transform.forward;
                             snapValue = selectedItemDetails.RotationSnap.z;
@@ -352,7 +352,7 @@ namespace FuzzPhyte.Tools.Connections
                     {
                        
                         //Quaternion RotationDeltaZ = Quaternion.AngleAxis(rotationZAngleSigned*rotationScalar,ToolCamera.transform.forward);
-                        if (eventData.button == PointerEventData.InputButton.Middle)
+                        if (eventData.button == PointerEventData.InputButton.Right)
                         {
                             //selectedItem.transform.rotation = RotationDeltaZ * selectItemStartRotation;
                         }

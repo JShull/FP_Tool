@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7655ebd72dcb25e44a03a2a9498ad993, type: 3}
+  m_Name: ElbowPipe_TwoEnd
+  m_EditorClassIdentifier: 
+  UniqueID: LongPipe_0_TwoEnds
+  UniquePartID: 0
+  PartWidth: 0.02
+  ConnectionEndPrefab: {fileID: 1830916329416036123, guid: 45c2afeb939ccca4fb9533885c11a847,
+    type: 3}
+  AllConnectionPointsForPart:
+  - {fileID: 11400000, guid: c7aaf84e1444b422782b81e338a7d230, type: 2}
+  - {fileID: 11400000, guid: a85244e3e8480446ca75fb06b345f15f, type: 2}

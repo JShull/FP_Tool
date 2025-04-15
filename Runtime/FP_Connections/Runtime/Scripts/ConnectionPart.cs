@@ -14,7 +14,8 @@ namespace FuzzPhyte.Tools.Connections
     public class ConnectionPart : FP_Tool<PartData>, IFPUIEventListener<FP_Tool<PartData>>
     {
         [Header("Part Related")]
-        public GameObject FixedAttachedPrefab;
+        public bool UseSimpleAlign=true;
+        //public GameObject FixedAttachedPrefab;
         [Tooltip("The reference transform we might attach another connected part to later for attachment/removal")]
         public Transform FixedAttachedParent;
         [Tooltip("The reference transform we are going to nest our connection points under")]
@@ -243,39 +244,34 @@ namespace FuzzPhyte.Tools.Connections
                     allPossibleTargets.Add(aConnectableItem);
                 }
             }
-            if (allPossibleTargets.Count > 1)
+            //possible targets always just grab the first
+
+            //standard singular case
+            if(allPossibleTargets.Count>0)
             {
-                //special case
-                Debug.LogError($"Special case in which possible targets exceed 1");
-            }
-            else
-            {
-                if (allPossibleTargets.Count == 1)
+                var theTarget = allPossibleTargets[0];
+                if (theTarget != null)
                 {
-                    //standard singular case
-                    var theTarget = allPossibleTargets[0];
-                    if (theTarget != null)
+                    //build up all possible points based on current connection points and connected items
+                    //var allOpenPossiblePoints = ThePipe.GetOpenConnectionPoints();
+                        
+                    var greatSuccess = TryAlignmentOnRelease(theTarget, InternalAvailableConnections);
+                    if (greatSuccess)
                     {
-                        //build up all possible points based on current connection points and connected items
-                        //var allOpenPossiblePoints = ThePipe.GetOpenConnectionPoints();
-                         
-                        var greatSuccess = TryAlignmentOnRelease(theTarget, InternalAvailableConnections);
-                        if (greatSuccess)
-                        {
-                            Debug.LogWarning($"Pipe Grab Alignment worked!");
-                            // change state
-                        }
-                        else
-                        {
-                            Debug.LogWarning($"Pipe Grab Alignment Failed!");
-                        }
+                        Debug.LogWarning($"Pipe Grab Alignment worked!");
+                        // change state
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"Pipe Grab Alignment Failed!");
                     }
                 }
                 else
                 {
-                    Debug.LogWarning($"{this.gameObject.name}, has zero connections, need to clean up! I currently have: {AlignmentConnectionPointPair.Count} Alignment(s)");
+                    Debug.LogError($"The target is null, we are not able to connect to anything");
                 }
             }
+            
             DeactivateTool();
         }
         public void PointerDrag(PointerEventData eventData)
@@ -595,6 +591,7 @@ namespace FuzzPhyte.Tools.Connections
                         }
                     }
                 }
+                
                 if (myClosestPoint != null && otherClosestPoint != null)
                 {
                     var outcome = myClosestPoint.IsCompatibleWith(otherClosestPoint, out Quaternion bestRotation);
@@ -602,7 +599,15 @@ namespace FuzzPhyte.Tools.Connections
                     if (outcome.Item1)
                     {
                         //align the two items
-                        AlignTo(otherItem, otherClosestPoint, myClosestPoint, outcome.Item2, outcome.Item3);
+                        //AlignTo(otherItem, otherClosestPoint, myClosestPoint, outcome.Item2, outcome.Item3);
+                        if(UseSimpleAlign)
+                        {
+                            AlignToSimple(otherClosestPoint, myClosestPoint);
+                        }
+                        else
+                        {
+                            AlignTo(otherItem, otherClosestPoint, myClosestPoint, outcome.Item2, outcome.Item3);
+                        }
                         OnPartAlignmentMade(this, myClosestPoint, otherItem, otherClosestPoint);
                         return true;
                     }
@@ -627,13 +632,39 @@ namespace FuzzPhyte.Tools.Connections
             myPoint.RemoveAlignmentPoint(targetPoint, false);
             return true;
         }
+        protected void AlignToSimple(ConnectionPointUnity targetPoint,ConnectionPointUnity myPoint)
+        {
+            // Step 1: Calculate the forward vectors from the connection points
+            Vector3 myForward = myPoint.transform.TransformDirection(myPoint.ConnectionPointData.localForward);
+            Vector3 targetForward = targetPoint.transform.TransformDirection(-targetPoint.ConnectionPointData.localForward);
+
+            // Step 2: Compute the cross product to determine the normal vector
+            Vector3 rotationAxis = Vector3.Cross(myForward, targetForward).normalized;
+
+            // Step 3: Compute the angle required to align these normal vectors
+            float angle = Vector3.SignedAngle(myForward, targetForward, rotationAxis);
+
+            // Step 4: Create a rotation that aligns myPoint with targetPoint on the first axis
+            Quaternion alignmentRotation = Quaternion.AngleAxis(angle, rotationAxis);
+
+            // Step 5: Apply the alignment rotation to parent transform
+            this.transform.rotation = alignmentRotation * this.transform.rotation;
+            
+            //move the vector direction and distance between targetPoint and myPoint but apply it to my root
+            Vector3 positionOffset = targetPoint.transform.position - myPoint.transform.position;
+            // Step 6: Adjust the position of myPoint to align with targetPoint
+            this.transform.position += positionOffset;
+            // Step 6: Update the connection point status for both
+            myPoint.AddAlignmentPoint(targetPoint);
+            targetPoint.AddAlignmentPoint(myPoint);
+        }
         protected void AlignTo(ConnectionPart targetItem, ConnectionPointUnity targetPoint, ConnectionPointUnity myPoint, Vector3 dataMyVector, Vector3 dataTargetVector)
         {
             // Step 1: Calculate the forward vectors from the connection points
             Vector3 myForward = myPoint.transform.TransformDirection(myPoint.ConnectionPointData.localForward);
             // Invert targetForward to handle 180-degree misalignment
             Vector3 targetForward = targetPoint.transform.TransformDirection(-targetPoint.ConnectionPointData.localForward);
-            //Vector3 targetForward = targetPoint.transform.TransformDirection(targetPoint.connectionPointData.localForward);
+            //Vector3 targetForward = targetPoint.transform.TransformDirection(targetPoint.ConnectionPointData.localForward);
 
             // Convert the local data vectors to world space
             Vector3 myDataWorld = myPoint.transform.TransformDirection(dataMyVector);
