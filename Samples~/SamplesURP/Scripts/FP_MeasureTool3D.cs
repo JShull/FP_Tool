@@ -12,6 +12,8 @@ namespace FuzzPhyte.Tools.Samples
     [RequireComponent(typeof(RectTransform))]
     public class FP_MeasureTool3D : FP_Tool<FP_MeasureToolData>, IFPUIEventListener<FP_Tool<FP_MeasureToolData>>
     {
+        public float CustomScale = 1f;
+        public string CustomScaleText = "FT";
         public Transform ParentDecals;
         //public float RaycastMaxDistance = 20f;
         [Tooltip("We are 2D casting into 3D Space - this RectTransform is our boundary")]
@@ -23,9 +25,11 @@ namespace FuzzPhyte.Tools.Samples
         [Header("Internal parameters")]
         protected Vector3 startPosition = Vector3.zero;
         protected Vector3 endPosition = Vector3.zero;
+        public Vector3 EndPosition { get => endPosition; }
         protected Plane cachedPlane;
         [SerializeField] FP_MeasureLine3D currentActiveLine;
         [SerializeField]protected List<FP_MeasureLine3D> allMeasuredLines = new List<FP_MeasureLine3D>();
+        //public GameObject PromptPanel;
         
         /// <summary>
         /// Some additional UI reference to reset lines and deactivate if we need it
@@ -236,10 +240,12 @@ namespace FuzzPhyte.Tools.Samples
                             currentActiveLine.DropSecondPoint(endPosition);
                             UpdateMeasurementText();
                             currentActiveLine.transform.SetParent(ParentDecals);
+                            Debug.Log($"Do you wish to place hanger?");
                         }
                     }
                     OnMeasureToolEnding.Invoke();
                     DeactivateTool();
+                    //PromptPanel.SetActive(true);
                 }
             }
             else
@@ -283,16 +289,16 @@ namespace FuzzPhyte.Tools.Samples
             if (currentActiveLine != null)
             {
                 //convert to the correct measurement system - our distance coming in is going to be in world meters
-                var unitReturn = FP_UtilityData.ReturnUnitByPixels(1, distance, toolData.measurementUnits);
+                var unitReturn = FP_UtilityData.ReturnUnitByPixels(1, distance, toolData.measurementUnits,CustomScale);
                 if (unitReturn.Item1)
                 {
                     var formattedDistance = unitReturn.Item2.ToString($"F{toolData.measurementPrecision}");
-                    currentActiveLine.UpdateText($"{toolData.measurementPrefix}{formattedDistance}{toolData.measurementUnits}");
+                    currentActiveLine.UpdateText($"{toolData.measurementPrefix} {formattedDistance} {CustomScaleText}");
                 }
                 else
                 {
                     Debug.LogWarning($"Failed to convert the distance {distance} to the correct measurement system {toolData.measurementUnits}");
-                    currentActiveLine.UpdateText($"{toolData.measurementPrefix}{distance}pixels");
+                    currentActiveLine.UpdateText($"{toolData.measurementPrefix} {distance} pixels");
                 }
                 currentActiveLine.UpdateTextLocation(ToolData.measurementLabelOffsetPixels);
                 
