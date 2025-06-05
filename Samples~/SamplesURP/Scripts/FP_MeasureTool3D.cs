@@ -287,12 +287,12 @@ namespace FuzzPhyte.Tools.Samples
                 if (unitReturn.Item1)
                 {
                     var formattedDistance = unitReturn.Item2.ToString($"F{toolData.measurementPrecision}");
-                    currentActiveLine.UpdateText($"{toolData.measurementPrefix} {formattedDistance} {toolData.measurementUnits}");
+                    currentActiveLine.UpdateText($"{toolData.measurementPrefix}{formattedDistance}{toolData.measurementUnits}");
                 }
                 else
                 {
                     Debug.LogWarning($"Failed to convert the distance {distance} to the correct measurement system {toolData.measurementUnits}");
-                    currentActiveLine.UpdateText($"{toolData.measurementPrefix} {distance} pixels");
+                    currentActiveLine.UpdateText($"{toolData.measurementPrefix}{distance}pixels");
                 }
                 currentActiveLine.UpdateTextLocation(ToolData.measurementLabelOffsetPixels);
                 
