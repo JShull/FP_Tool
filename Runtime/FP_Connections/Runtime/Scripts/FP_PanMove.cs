@@ -12,7 +12,7 @@ namespace FuzzPhyte.Tools.Connections
         public RectTransform movePanRectParentPanel;
         [Tooltip("Max raycast distance for when we fire")]
         public float RaycastMaxDistance = 15;
-
+        public LayerMask RaycastLayerMask;
         [Space]
         [Header("Forward Plane Details")]
         public Transform ForwardPlaneLocation;
@@ -206,7 +206,7 @@ namespace FuzzPhyte.Tools.Connections
                     Debug.LogWarning($"Ray: {ray.origin} | {ray.direction}");
                     Debug.DrawRay(ray.origin, ray.direction * RaycastMaxDistance, FP_UtilityData.ReturnColorByStatus(SequenceStatus.Unlocked), 10f);
                     Debug.DrawRay(PointData.Item2,Vector3.up,Color.red,9f);
-                    Physics.Raycast(ray, out potentialHit, RaycastMaxDistance);
+                    Physics.Raycast(ray, out potentialHit, RaycastMaxDistance, RaycastLayerMask);
                     
                     if (potentialHit.collider!=null)
                     {
@@ -219,7 +219,7 @@ namespace FuzzPhyte.Tools.Connections
                             selectedItemDetails=FPMRItem.MoveRotateItem;
                             if (selectedItemDetails == null)
                             {
-                                Debug.LogError($"We don't have a MoveRotateItem component but we need one!");
+                                Debug.LogError($"We hit something, {FPMRItem.gameObject.name}, and it didn't have a FP_MoveRotateItem component, we need one to continue!");
                                 return;
                             }
                             selectedItem = selectedItemDetails.gameObject;
