@@ -243,13 +243,25 @@ namespace FuzzPhyte.Tools.Connections
             // possible target comes in from the trigger events
             // loop through our dictionary of possible targets
             Debug.Log($"{this.gameObject.name}: ConnectionPart.cs Pointer UP");
-            var possibleTargets = PossibleTargetByPoint.Keys.ToList();
+            
             List<ConnectionPart> allPossibleTargets = new List<ConnectionPart>();
-            Debug.LogWarning($"Possible cached Targets Count: {possibleTargets.Count} for {this.gameObject.name} with {PossibleTargetByPoint.Count} items in the dictionary");
+            
             foreach(var keyItem in PossibleTargetByPoint)
             {
-                Debug.LogWarning($"Key: {keyItem.Key.gameObject.name} => Value: {keyItem.Value.gameObject.name} in the PossibleTargetByPoint Dictionary for {this.gameObject.name}");
+                var valueItem = keyItem.Value;
+                if (valueItem == null)
+                {
+                    //need to clean up our dictionary because we have a problem = null value stored
+                    PossibleTargetByPoint.Remove(keyItem.Key);
+                    Debug.LogWarning($"Removing a null value from the PossibleTargetByPoint Dictionary for {this.gameObject.name} with key: {keyItem.Key.gameObject.name}");
+                }
+                else
+                {
+                    Debug.LogWarning($"Key: {keyItem.Key.gameObject.name} => Value: {keyItem.Value.gameObject.name} in the PossibleTargetByPoint Dictionary for {this.gameObject.name}");
+                }    
             }
+            var possibleTargets = PossibleTargetByPoint.Keys.ToList();
+            Debug.LogWarning($"Possible cached Targets Count: {possibleTargets.Count} for {this.gameObject.name} with {PossibleTargetByPoint.Count} items in the dictionary");
             for (int i = 0; i < possibleTargets.Count; i++)
             {
                 var aConnectionPoint = possibleTargets[i];
