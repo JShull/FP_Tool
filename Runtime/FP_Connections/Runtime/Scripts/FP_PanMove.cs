@@ -98,7 +98,7 @@ namespace FuzzPhyte.Tools.Connections
         #region testing
         public void TestingDebug(string message)
         {
-            Debug.LogWarning($"Testing Debug: {message}");
+            //Debug.LogWarning($"Testing Debug: {message}");
         }
         [ContextMenu("Forward Plane One Snap Unit")]
         public void ForwardPlaneOneSnapUnit()
@@ -203,7 +203,7 @@ namespace FuzzPhyte.Tools.Connections
                     RaycastHit potentialHit;
                     var direction = (PointData.Item2 - ToolCamera.transform.position).normalized;
                     Ray ray = new Ray(ToolCamera.transform.position, direction);
-                    Debug.LogWarning($"Ray: {ray.origin} | {ray.direction}");
+                    //Debug.LogWarning($"Ray: {ray.origin} | {ray.direction}");
                     Debug.DrawRay(ray.origin, ray.direction * RaycastMaxDistance, FP_UtilityData.ReturnColorByStatus(SequenceStatus.Unlocked), 10f);
                     Debug.DrawRay(PointData.Item2,Vector3.up,Color.red,9f);
                     Physics.Raycast(ray, out potentialHit, RaycastMaxDistance, RaycastLayerMask);
