@@ -249,9 +249,11 @@ namespace FuzzPhyte.Tools.Connections
             for (int i = 0; i < possibleTargets.Count; i++)
             {
                 var aConnectionPoint = possibleTargets[i];
+                Debug.LogWarning($"A possible connection point: {aConnectionPoint.gameObject.name}");
                 var aConnectableItem = PossibleTargetByPoint[aConnectionPoint];
                 if (aConnectableItem != null)
                 {
+                    Debug.LogWarning($"A possible connectable item: {aConnectableItem.gameObject.name}, going to add this to my cached possible target list");
                     allPossibleTargets.Add(aConnectableItem);
                 }
             }
