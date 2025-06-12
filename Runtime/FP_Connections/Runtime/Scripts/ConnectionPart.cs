@@ -392,7 +392,8 @@ namespace FuzzPhyte.Tools.Connections
             {
                 if (PossibleTargetByPoint.ContainsKey(myPoint))
                 {
-                    PossibleTargetByPoint[myPoint] = otherPoint.TheConnectionPart;
+                    //do nothing because we already have something as a possible target by my CPU point
+                    //PossibleTargetByPoint[myPoint] = otherPoint.TheConnectionPart;
                 }
                 else
                 {
@@ -403,7 +404,8 @@ namespace FuzzPhyte.Tools.Connections
                 //sync with Alignment AlignmentConnectionPointPair
                 if (AlignmentConnectionPointPair.ContainsKey(myPoint))
                 {
-                    AlignmentConnectionPointPair[myPoint] = otherPoint;
+                    //if I already have a pair then I want to do nothing else.
+                    //AlignmentConnectionPointPair[myPoint] = otherPoint;
                 }
                 else
                 {
@@ -421,16 +423,30 @@ namespace FuzzPhyte.Tools.Connections
                 //var cpu = item.gameObject.GetComponent<ConnectionPointUnity>();
                 if (PossibleTargetByPoint.ContainsKey(myPoint))
                 {
-                    PossibleTargetByPoint.Remove(myPoint);
-                    Debug.LogWarning($"This {this.gameObject.name} is removing a Target Point from the Dictionary: {myPoint.gameObject.name}");
-                    if (AlignmentConnectionPointPair.ContainsKey(myPoint))
+                    //I do have a match but does it actually align to the value of the otherPoint
+                    //check the stored value
+                    var valueStored = PossibleTargetByPoint[myPoint];
+                    //does this match?
+                    if(valueStored== otherPoint.TheConnectionPart)
                     {
-                        AlignmentConnectionPointPair.Remove(myPoint);
-                        OnTriggerExitUnityEvent.Invoke();
-                        Debug.LogWarning($"This {this.gameObject.name} is removing an alignment connection point {myPoint.gameObject.name}");
-                        myPoint.RemoveAlignmentPoint(otherPoint,false);
-                        otherPoint.RemoveAlignmentPoint(myPoint, false);
+                        //we do match, this means our possible target by point from our dictionary has left us
+                        PossibleTargetByPoint.Remove(myPoint);
+                        Debug.LogWarning($"This {this.gameObject.name} is removing a Target Point from the Dictionary: {myPoint.gameObject.name}");
+                        //sync with alignment as we have already confirmed we care about this information
+                        if (AlignmentConnectionPointPair.ContainsKey(myPoint))
+                        {
+                            AlignmentConnectionPointPair.Remove(myPoint);
+                            OnTriggerExitUnityEvent.Invoke();
+                            Debug.LogWarning($"This {this.gameObject.name} is removing an alignment connection point {myPoint.gameObject.name}");
+                            myPoint.RemoveAlignmentPoint(otherPoint, false);
+                            otherPoint.RemoveAlignmentPoint(myPoint, false);
+                        }
                     }
+                    else
+                    {
+                        Debug.LogWarning($"This {this.gameObject.name} had a trigger exit callback, but it was some other part that I don't care about, part passing by was: {otherPoint.gameObject.name}");
+                    }
+                    
                 }
                 else
                 {
