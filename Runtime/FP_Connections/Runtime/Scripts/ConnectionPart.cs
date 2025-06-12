@@ -246,6 +246,10 @@ namespace FuzzPhyte.Tools.Connections
             var possibleTargets = PossibleTargetByPoint.Keys.ToList();
             List<ConnectionPart> allPossibleTargets = new List<ConnectionPart>();
             Debug.LogWarning($"Possible cached Targets Count: {possibleTargets.Count} for {this.gameObject.name} with {PossibleTargetByPoint.Count} items in the dictionary");
+            foreach(var keyItem in PossibleTargetByPoint)
+            {
+                Debug.LogWarning($"Key: {keyItem.Key.gameObject.name} => Value: {keyItem.Value.gameObject.name} in the PossibleTargetByPoint Dictionary for {this.gameObject.name}");
+            }
             for (int i = 0; i < possibleTargets.Count; i++)
             {
                 var aConnectionPoint = possibleTargets[i];
@@ -253,7 +257,7 @@ namespace FuzzPhyte.Tools.Connections
                 var aConnectableItem = PossibleTargetByPoint[aConnectionPoint];
                 if (aConnectableItem != null)
                 {
-                    Debug.LogWarning($"A possible connectable item: {aConnectableItem.gameObject.name}, going to add this to my cached possible target list");
+                    Debug.LogWarning($"A possible connectable item: {aConnectableItem.gameObject.name}, is going to be added to my cached possible target list");
                     allPossibleTargets.Add(aConnectableItem);
                 }
             }
