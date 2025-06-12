@@ -387,7 +387,7 @@ namespace FuzzPhyte.Tools.Connections
         #region Callbacks for Trigger Events Tied to ConnectionPointUnity
         protected void OnConnectionPointTriggerEnter(Collider item, ConnectionPointUnity myPoint, ConnectionPointUnity otherPoint)
         {
-            Debug.LogWarning($"Callback--> Connection Point Trigger Enter: {item.gameObject.name} with {myPoint.gameObject.name}");
+            Debug.LogWarning($"Callback--> Connection Point Trigger Enter: {item.gameObject.name} via myPoint {myPoint.gameObject.name} with other point named: {myPoint.gameObject.name}");
             if (otherPoint.TheConnectionPart != null)
             {
                 if (PossibleTargetByPoint.ContainsKey(myPoint))

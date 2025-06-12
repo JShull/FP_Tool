@@ -178,6 +178,11 @@ namespace FuzzPhyte.Tools.Connections
             {
                 case ConnectionPointStatus.Aligned:
                     //check if my otherAlignedPoint is the same - if it is just continue - if it's not then we have to return a false/failure
+                    if (otherAlignedPoint == null)
+                    {
+                        Debug.LogWarning($"This object, {gameObject.name}, does not have a otherAlignedPoint and won't be able to connect to {other.gameObject.name} right now.");
+                        return (false, Vector3.zero, Vector3.zero);
+                    }
                     if(otherAlignedPoint !=other)
                     {
                         Debug.LogWarning($"Already in an alignment status with {otherAlignedPoint.gameObject.name} and cannot align/connect with a new passed point like {other.gameObject.name} right now.");
