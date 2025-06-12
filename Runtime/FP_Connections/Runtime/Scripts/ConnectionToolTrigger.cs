@@ -33,7 +33,8 @@ namespace FuzzPhyte.Tools.Connections
         {
             if (!active) return;
             //Debug.LogWarning($"Collided with {other.gameObject.name}");
-            if (other.gameObject.tag == TagToCompare)
+            if (other.gameObject.CompareTag(TagToCompare))
+            //if (other.gameObject.tag == TagToCompare)
             {
                 if (other.GetComponent<ConnectionToolTrigger>() != null)
                 {
