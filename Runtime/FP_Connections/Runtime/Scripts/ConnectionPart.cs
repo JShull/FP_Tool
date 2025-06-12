@@ -48,8 +48,18 @@ namespace FuzzPhyte.Tools.Connections
             for (int i = 0; i < toolData.AllConnectionPointsForPart.Count; i++)
             {
                 var curPointData = toolData.AllConnectionPointsForPart[i];
-                GameObject prefabSpawned = GameObject.Instantiate(toolData.ConnectionEndPrefab, ConnectionPtParent);
-                
+              
+                GameObject prefabSpawned = null;
+                //we use the ConnectionPointData prefab if we have one or we use one that is defined in the toolData for all
+                if (curPointData.ConnectionEndPrefab != null)
+                {
+                    prefabSpawned = GameObject.Instantiate(curPointData.ConnectionEndPrefab, ConnectionPtParent);
+                }
+                else
+                {
+                    prefabSpawned = GameObject.Instantiate(toolData.ConnectionEndPrefab, ConnectionPtParent);
+                }
+
                 //get component
                 var cpu = prefabSpawned.GetComponent<ConnectionPointUnity>();
                 var fpCollide = prefabSpawned.GetComponent<FP_CollideItem>();
