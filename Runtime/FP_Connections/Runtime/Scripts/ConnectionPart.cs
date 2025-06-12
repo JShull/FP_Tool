@@ -245,20 +245,29 @@ namespace FuzzPhyte.Tools.Connections
             Debug.Log($"{this.gameObject.name}: ConnectionPart.cs Pointer UP");
             
             List<ConnectionPart> allPossibleTargets = new List<ConnectionPart>();
-            
-            foreach(var keyItem in PossibleTargetByPoint)
+            List<ConnectionPointUnity> cleanUpTargets = new List<ConnectionPointUnity>();
+            foreach (var keyItem in PossibleTargetByPoint)
             {
                 var valueItem = keyItem.Value;
                 if (valueItem == null)
                 {
                     //need to clean up our dictionary because we have a problem = null value stored
-                    PossibleTargetByPoint.Remove(keyItem.Key);
-                    Debug.LogWarning($"Removing a null value from the PossibleTargetByPoint Dictionary for {this.gameObject.name} with key: {keyItem.Key.gameObject.name}");
+                    cleanUpTargets.Add(keyItem.Key);
+                    Debug.LogWarning($"Found a null data reference adding to my list for removal, {keyItem.Key.gameObject.name}");
                 }
                 else
                 {
                     Debug.LogWarning($"Key: {keyItem.Key.gameObject.name} => Value: {keyItem.Value.gameObject.name} in the PossibleTargetByPoint Dictionary for {this.gameObject.name}");
                 }    
+            }
+            for(int i=0;i<cleanUpTargets.Count; i++)
+            {
+                var aKey = cleanUpTargets[i];
+                if (PossibleTargetByPoint.ContainsKey(aKey))
+                {
+                    PossibleTargetByPoint.Remove(aKey);
+                    Debug.LogWarning($"Removed Key: {aKey.gameObject.name} from the PossibleTargetByPoint Dictionary for {this.gameObject.name} due to the value being flagged  null");
+                }
             }
             var possibleTargets = PossibleTargetByPoint.Keys.ToList();
             Debug.LogWarning($"Possible cached Targets Count: {possibleTargets.Count} for {this.gameObject.name} with {PossibleTargetByPoint.Count} items in the dictionary");
