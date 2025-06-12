@@ -414,7 +414,7 @@ namespace FuzzPhyte.Tools.Connections
         }
         protected void OnConnectionPointTriggerExit(Collider item, ConnectionPointUnity myPoint, ConnectionPointUnity otherPoint)
         {
-            Debug.LogWarning($"Callback--> Connection Point Trigger Exit: {item.gameObject.name} with {myPoint.gameObject.name}");
+            Debug.LogWarning($"This {this.gameObject.name} is performing a Callback--> Connection Point Trigger Exit: {item.gameObject.name} via myPoint {myPoint.gameObject.name} with other point named: {otherPoint.gameObject.name}");
             if (item.gameObject.GetComponent<ConnectionPointUnity>() != null)
             {
                
