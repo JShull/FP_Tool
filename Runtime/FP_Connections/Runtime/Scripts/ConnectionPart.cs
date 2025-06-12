@@ -467,7 +467,17 @@ namespace FuzzPhyte.Tools.Connections
                             OnTriggerExitUnityEvent.Invoke();
                             Debug.LogWarning($"This {this.gameObject.name} is removing an alignment connection point {myPoint.gameObject.name}");
                             myPoint.RemoveAlignmentPoint(otherPoint, false);
-                            otherPoint.RemoveAlignmentPoint(myPoint, false);
+                            //need to confirm that my other point was actually aligned with me, I've only checked on my side not the other side
+                            if (otherPoint.OtherAlignedPoint == myPoint)
+                            {
+                                //we did have a match so we want to ask my friend to remove our alignment
+                                otherPoint.RemoveAlignmentPoint(myPoint, false);
+                            }
+                            else
+                            {
+                                Debug.LogWarning($"This {this.gameObject.name} had an alignment but it was on something that didn't align or was probably already aligned, so I don't need to do anything else");
+                            }
+                            
                         }
                     }
                     else
