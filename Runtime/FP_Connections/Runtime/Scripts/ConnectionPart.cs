@@ -245,6 +245,7 @@ namespace FuzzPhyte.Tools.Connections
             Debug.Log($"{this.gameObject.name}: ConnectionPart.cs Pointer UP");
             var possibleTargets = PossibleTargetByPoint.Keys.ToList();
             List<ConnectionPart> allPossibleTargets = new List<ConnectionPart>();
+            Debug.LogWarning($"Possible cached Targets Count: {possibleTargets.Count} for {this.gameObject.name} with {PossibleTargetByPoint.Count} items in the dictionary");
             for (int i = 0; i < possibleTargets.Count; i++)
             {
                 var aConnectionPoint = possibleTargets[i];
