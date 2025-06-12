@@ -7,6 +7,7 @@ namespace FuzzPhyte.Tools.Connections
     [CreateAssetMenu(fileName = "FP_ConnectionPointData", menuName = "FuzzPhyte/Connections/ConnectionPoint")]
     public class ConnectionPointData : FP_Data
     {
+        public GameObject ConnectionEndPrefab;
         public string connectionType;
         public float width;
         [Tooltip("For scaling gizmos")]
