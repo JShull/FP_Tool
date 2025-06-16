@@ -66,6 +66,7 @@ namespace FuzzPhyte.Tools.Connections
         public UnityEvent OnToolActivatedUnityEvent;
         public UnityEvent OnToolSelectedItemUnityEvent;
         public UnityEvent OnToolDropItemUnityEvent;
+        public UnityEvent OnToolDeactivatedUnityEvent;
         [Space]
         public UnityEvent PlaneMovedForwardEvent;
         public UnityEvent PlaneMovedBackwardEvent;
@@ -470,7 +471,9 @@ namespace FuzzPhyte.Tools.Connections
                 if(!LoopTool)
                 {
                     //we do want to turn off ToolIsCurrent
+                    
                     ToolIsCurrent = false;
+                    OnToolDeactivatedUnityEvent.Invoke();
                 }
                 return true;
             }
@@ -489,6 +492,7 @@ namespace FuzzPhyte.Tools.Connections
                 selectedItem = null;
                 selectedItemDetails = null;
                 isMoving = false;
+                OnToolDeactivatedUnityEvent.Invoke();
                 return true;
             }
             return false;
