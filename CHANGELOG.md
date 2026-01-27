@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-01-27
+
+### 0.5.0 Added
+
+- [@JShull](https://github.com/jshull)
+  - FP_EquipmentBase.cs
+  - FP_EquipmentData.cs
+  - FP_EquipmentMicrowave.cs
+  - FP_EquipmentTickableBase.cs
+    - Equipment Concept Added that relies on the FP_TickSystem as well as harnessing a binder architecture
+
+### 0.5.0 Modified
+
+- [@JShull](https://github.com/jshull)
+  - FPToolUtility.cs
+    - Interface/enums to support Equipment
+
 ## [0.4.0] - 2025-07-01
 
 ### 0.4.0 Added

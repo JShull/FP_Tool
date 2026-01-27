@@ -1,10 +1,11 @@
 namespace FuzzPhyte.Tools
 {
     using System;
+    using System.Collections.Generic;
     using UnityEngine;
     using FuzzPhyte.Utility;
 
-    
+    #region Interfaces
     /// <summary>
     /// Generic Tool Listener setup with Functions tied to state of the tool
     /// </summary>
@@ -25,7 +26,74 @@ namespace FuzzPhyte.Tools
         void DropFirstPoint(Vector3 pos);
         void DropSecondPoint(Vector3 pos);
     }
+    #endregion
+    #region Equipment Related
 
+    public enum EquipmentPowerState
+    {
+        NA,
+        Off,
+        On,
+        OnWithTimer,
+    }
+    public enum EquipmentConditionState
+    {
+        NA,
+        OK,
+        Broken,
+        NeedsMaintenance,
+    }
+    public enum EquipmentFillState
+    {
+        NA,
+        Empty,
+        ContainsItem,
+        ContainsLiquid,
+        MixedContents
+    }
+    public enum EquipmentCommandType
+    {
+        TogglePower,
+        SetPowerOn,
+        SetPowerOff,
+        SetHeatLevel01,
+        SetHeatLevel02,
+        SetHeatLevel03,
+        StartTimerSeconds,
+        CancelTimer,
+        SetFillLevel01,
+        SetFillLevel02,
+        SetFillLevel03,
+        InsertItem,
+        RemoveItem,
+        Break,
+        Repair
+    }
+    [System.Serializable]
+    public struct EquipmentCommand
+    {
+        public EquipmentCommandType Type;
+        public float FValue;
+        public string SValue;
+    }
+    public struct EquipmentEvent
+    {
+        public string EquipmentId;
+        public EquipmentStatus Status;
+    }
+    [System.Serializable]
+    public struct EquipmentStatus
+    {
+        public EquipmentPowerState Power;
+        public EquipmentConditionState Condition;
+
+        [Range(0,1)]
+        public float NormalizedLevel;
+        public float TimerRemainingSec;
+        public EquipmentFillState Fill;
+        public List<string> ContainedItemIds;
+    }
+    #endregion
     public static class FPToolUtility
     {
     
