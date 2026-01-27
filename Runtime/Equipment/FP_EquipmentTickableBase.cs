@@ -47,7 +47,6 @@ namespace FuzzPhyte.Tools
         {
             OnTick(dt);
         }
-
         /// <summary>
         /// Override this for per-tick behavior.
         /// dt is the tick step size provided by FP_TickSystem (frame dt, fixed dt, or interval).
@@ -80,15 +79,24 @@ namespace FuzzPhyte.Tools
             tickGroup = newGroup;
 
             if (wasRegistered)
+            {
                 FP_TickSystem.CCTick.Register(this);
+                // set dirty to ensure proper ordering
+                FP_TickSystem.CCTick.MarkGroupDirty(tickGroup);
+            }
+                
         }
 
         public void SetTickPriority(int newPriority)
         {
+            if(tickPriority==newPriority) return;
+
             tickPriority = newPriority;
 
-            // If you later add a "MarkDirty(group)" API to FP_TickSystem, call it here.
-            // For now, changing priority at runtime will take effect the next time the group list is resorted.
+            if (FP_TickSystem.CCTick != null)
+            {
+                FP_TickSystem.CCTick.MarkGroupDirty(tickGroup);
+            }
         }
     }
 }

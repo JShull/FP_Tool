@@ -5,16 +5,8 @@ namespace FuzzPhyte.Tools
 
     public class FP_EquipmentMicrowave : FP_EquipmentTickableBase
     {
-        [Header("Tick Settings")]
-        [SerializeField] private int tickGroup = 1;
-        [SerializeField] private int tickPriority = 0;
-
         private TimerData _activeTimer;
-
         
-
-      
-
         protected override void OnTick(float dt)
         {
             if (_activeTimer == null || FP_Timer.CCTimer == null)
