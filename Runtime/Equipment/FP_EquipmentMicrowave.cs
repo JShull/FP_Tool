@@ -1,12 +1,44 @@
 namespace FuzzPhyte.Tools
 {
     using FuzzPhyte.Utility;
+    using System;
+    using System.Collections.Generic;
     using UnityEngine;
+    using UnityEngine.Events;
+
+    [Serializable] public class MicrowaveEvent : UnityEvent<FP_EquipmentMicrowave> { }
+
 
     public class FP_EquipmentMicrowave : FP_EquipmentTickableBase
     {
         private TimerData _activeTimer;
-        
+        [SerializeField] private float EPSILON = 0.01f;
+        public TimerData ActiveTimer => _activeTimer;
+        [SerializeField] private float _pausedRemainingTime = 0f;
+        [SerializeField] private bool _isPaused = false;
+
+        [Header("Microwave Events")]
+        public MicrowaveEvent OnStarted;
+        public MicrowaveEvent OnPaused;
+        public MicrowaveEvent OnResumed;
+        public MicrowaveEvent OnCancelled;
+        public MicrowaveEvent OnFinished;
+        public MicrowaveEvent OnBroken;
+        public MicrowaveEvent OnRepaired;
+
+        protected override void BuildDefaultTransitions()
+        {
+            powerTransitions = new()
+            {
+                { EquipmentPowerState.Off, new HashSet<EquipmentPowerState> { EquipmentPowerState.OnWithTimer } },
+                { EquipmentPowerState.OnWithTimer, new HashSet<EquipmentPowerState> { EquipmentPowerState.Off } },
+            };
+        }
+        public override void OnTickRegistered()
+        {
+            base.OnTickRegistered();
+            Debug.Log($"{name} registered with the tickSystem");
+        }
         protected override void OnTick(float dt)
         {
             if (_activeTimer == null || FP_Timer.CCTimer == null)
@@ -27,7 +59,8 @@ namespace FuzzPhyte.Tools
 
             // Pull remaining time from central timer and emit only if it changed.
             float remaining = FP_Timer.CCTimer.GetRemainingSeconds(_activeTimer);
-            if (!Mathf.Approximately(_status.TimerRemainingSec, remaining))
+            // Debug.Log($"From the timers mouth: {remaining}");
+            if (Mathf.Abs(_status.TimerRemainingSec - remaining) > EPSILON)
             {
                 _status.TimerRemainingSec = remaining;
                 Emit();
@@ -39,7 +72,8 @@ namespace FuzzPhyte.Tools
             switch (cmd.Type)
             {
                 case EquipmentCommandType.SetPowerOn:
-                    SetPower(EquipmentPowerState.On);
+                    Debug.LogWarning("Microwave requires a timerto run.");
+                    //SetPower(EquipmentPowerState.On);
                     break;
 
                 case EquipmentCommandType.SetPowerOff:
@@ -69,6 +103,13 @@ namespace FuzzPhyte.Tools
                     _status.Condition = EquipmentConditionState.OK;
                     Emit();
                     break;
+                case EquipmentCommandType.PauseTimer:
+                    PauseTimerInternal();
+                    break;
+
+                case EquipmentCommandType.ResumeTimer:
+                    ResumeTimerInternal();
+                    break;
             }
         }
 
@@ -91,27 +132,79 @@ namespace FuzzPhyte.Tools
 
                 _activeTimer = FP_Timer.CCTimer.StartTimer(seconds, OnTimerFinished);
             }
+            OnStarted?.Invoke(this);
         }
 
         private void OnTimerFinished()
         {
             _activeTimer = null;
+            _isPaused = false;
+            _pausedRemainingTime = 0;
             _status.TimerRemainingSec = 0f;
             SetPower(EquipmentPowerState.Off);
+            OnFinished?.Invoke(this);
         }
+
+        private void PauseTimerInternal()
+        {
+            if (_activeTimer == null || FP_Timer.CCTimer == null)
+                return;
+
+            // Capture remaining time
+            _pausedRemainingTime = FP_Timer.CCTimer.GetRemainingSeconds(_activeTimer);
+
+            // Stop timer
+            FP_Timer.CCTimer.CancelTimer(_activeTimer);
+            _activeTimer = null;
+
+            _isPaused = true;
+
+            // Power semantics: paused but not running
+            SetPower(EquipmentPowerState.Off);
+
+            _status.TimerRemainingSec = _pausedRemainingTime;
+            Emit();
+            OnPaused?.Invoke(this);
+        }
+        private void ResumeTimerInternal()
+        {
+            if (!_isPaused || _pausedRemainingTime <= 0f)
+                return;
+
+            _isPaused = false;
+
+            // Restart timer with remaining time
+            _activeTimer = FP_Timer.CCTimer.StartTimer(
+                _pausedRemainingTime,
+                OnTimerFinished
+            );
+
+            SetPower(EquipmentPowerState.OnWithTimer);
+
+            Emit();
+            OnResumed?.Invoke(this);
+        }
+
 
         private void CancelTimerInternal()
         {
             if (_activeTimer != null && FP_Timer.CCTimer != null)
-                FP_Timer.CCTimer.CancelTimer(_activeTimer);
-
-            _activeTimer = null;
-
-            if (_status.TimerRemainingSec != 0f)
             {
-                _status.TimerRemainingSec = 0f;
-                Emit();
+                FP_Timer.CCTimer.CancelTimer(_activeTimer);
+                _activeTimer = null;
             }
+
+            _status.TimerRemainingSec = 0f;
+            // reset pause state
+            _isPaused = false;
+            _pausedRemainingTime = 0f;
+
+            if (_status.Power == EquipmentPowerState.OnWithTimer || _status.Power == EquipmentPowerState.On)
+            {
+                SetPower(EquipmentPowerState.Off);
+            }
+            OnCancelled?.Invoke(this);
+            Emit();
         }
     }
 }

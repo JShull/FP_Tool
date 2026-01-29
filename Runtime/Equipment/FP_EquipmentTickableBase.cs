@@ -23,12 +23,7 @@ namespace FuzzPhyte.Tools
 
         protected virtual void OnEnable()
         {
-            if (!autoRegisterWithTickSystem) return;
-
-            if (FP_TickSystem.CCTick != null)
-                FP_TickSystem.CCTick.Register(this);
-
-            OnTickRegistered();
+           
         }
 
         protected virtual void OnDisable()
@@ -39,6 +34,19 @@ namespace FuzzPhyte.Tools
             OnTickUnregistered();
         }
 
+        protected virtual void Start()
+        {
+            if(!autoRegisterWithTickSystem) return;
+
+            if (FP_TickSystem.CCTick == null)
+            {
+                Debug.LogError("FP_TickSystem not initialized before Start.");
+                return;
+            }
+
+            FP_TickSystem.CCTick.Register(this);
+            OnTickRegistered();
+        }
         /// <summary>
         /// Called by FP_TickSystem. Do not override Tick() unless you need to.
         /// Override OnTick(dt) instead.

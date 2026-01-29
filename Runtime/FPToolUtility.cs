@@ -67,7 +67,9 @@ namespace FuzzPhyte.Tools
         InsertItem,
         RemoveItem,
         Break,
-        Repair
+        Repair,
+        PauseTimer,
+        ResumeTimer,
     }
     [System.Serializable]
     public struct EquipmentCommand
