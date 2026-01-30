@@ -7,15 +7,17 @@ namespace FuzzPhyte.Tools.Samples
     public class FP_MicrowaveDebugCommands : MonoBehaviour
     {
         public FP_EquipmentMicrowave Microwave;
-        [ContextMenu("Start Button: Power On")]
+        [SerializeField] private EquipmentCommand _currentCommand;
+        [ContextMenu("Start Button: Timer Based")]
         public void PowerOn()
         {
-            EquipmentCommand powerOn = new EquipmentCommand()
+            _currentCommand.Type = EquipmentCommandType.StartTimerSeconds;
+            if(_currentCommand.FValue <= 0)
             {
-                Type = EquipmentCommandType.SetPowerOn,
-                 
-            };
-            Microwave.Execute(powerOn);
+                _currentCommand.FValue = 10; // default to 10 seconds if no time set
+            }
+            Microwave.Execute(_currentCommand);
+            
         }
         [ContextMenu("Stop Button: Power Off")]
         public void PowerOff()
@@ -26,6 +28,26 @@ namespace FuzzPhyte.Tools.Samples
 
             };
             Microwave.Execute(powerOff);
+        }
+        [ContextMenu("10 seconds entered")]
+        public void ProgramTimer10Microwave()
+        {
+            _currentCommand = new EquipmentCommand()
+            {
+                Type = EquipmentCommandType.InterfaceActions,
+                FValue = 10,
+            };
+            Microwave.Execute(_currentCommand);
+        }
+        [ContextMenu("10 Second Button: Start Timer 10 Seconds")]
+        public void StartTimer10Seconds()
+        {
+            EquipmentCommand timerTen = new EquipmentCommand()
+            {
+                Type = EquipmentCommandType.StartTimerSeconds,
+                FValue = 10,
+            };
+            Microwave.Execute(timerTen);
         }
         [ContextMenu("30 Second Button: Start Timer 30 Seconds")]
         public void StartTimer30Seconds()

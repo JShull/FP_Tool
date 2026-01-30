@@ -70,6 +70,7 @@ namespace FuzzPhyte.Tools
         Repair,
         PauseTimer,
         ResumeTimer,
+        InterfaceActions,
     }
     [System.Serializable]
     public struct EquipmentCommand
@@ -77,6 +78,8 @@ namespace FuzzPhyte.Tools
         public EquipmentCommandType Type;
         public float FValue;
         public string SValue;
+        [Tooltip("Just so we can track if the command is active or not")]
+        public bool ActiveState;
     }
     public struct EquipmentEvent
     {

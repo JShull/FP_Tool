@@ -21,6 +21,7 @@ namespace FuzzPhyte.Tools
         public MicrowaveEvent OnStarted;
         public MicrowaveEvent OnPaused;
         public MicrowaveEvent OnResumed;
+        public MicrowaveEvent OnButtonsPushed;
         public MicrowaveEvent OnCancelled;
         public MicrowaveEvent OnFinished;
         public MicrowaveEvent OnBroken;
@@ -71,6 +72,10 @@ namespace FuzzPhyte.Tools
         {
             switch (cmd.Type)
             {
+                case EquipmentCommandType.InterfaceActions:
+                    Debug.LogWarning("Microwave interactions...");
+                    OnButtonsPushed?.Invoke(this);
+                    break;
                 case EquipmentCommandType.SetPowerOn:
                     Debug.LogWarning("Microwave requires a timerto run.");
                     //SetPower(EquipmentPowerState.On);
