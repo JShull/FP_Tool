@@ -17,6 +17,7 @@ namespace FuzzPhyte.Tools
         [SerializeField] private float _pausedRemainingTime = 0f;
         [SerializeField] private bool _isPaused = false;
         [SerializeField] private bool _doorOpen = false;
+        [SerializeField] private float _powerPerEmit = 10f;
         [Header("Microwave Events")]
         public MicrowaveEvent OnStarted;
         public MicrowaveEvent OnPaused;
@@ -36,6 +37,7 @@ namespace FuzzPhyte.Tools
                 { EquipmentPowerState.Off, new HashSet<EquipmentPowerState> { EquipmentPowerState.OnWithTimer } },
                 { EquipmentPowerState.OnWithTimer, new HashSet<EquipmentPowerState> { EquipmentPowerState.Off } },
             };
+            UpdateEmittedPowerUnit(_powerPerEmit);
         }
         public override void OnTickRegistered()
         {
@@ -171,7 +173,14 @@ namespace FuzzPhyte.Tools
             SetPower(EquipmentPowerState.Off);
             OnFinished?.Invoke(this);
         }
-
+        protected override void Emit()
+        {
+            base.Emit();
+            foreach(var item in _containedItems)
+            {
+                item.OnEquipmentStateChanged(this, _status);
+            }
+        }
         private void PauseTimerInternal()
         {
             if (_activeTimer == null || FP_Timer.CCTimer == null)
@@ -230,6 +239,11 @@ namespace FuzzPhyte.Tools
             }
             OnCancelled?.Invoke(this);
             Emit();
+        }
+
+        protected override void UpdateEmittedPowerUnit(float newValue)
+        {
+            _status.EmitPowerUnit = newValue;
         }
     }
 }

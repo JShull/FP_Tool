@@ -54,6 +54,10 @@ namespace FuzzPhyte.Tools
         public void Tick(float dt)
         {
             OnTick(dt);
+            foreach(var item in _containedItems)
+            {
+                item.OnEquipmentTick(this, _status, dt);
+            }
         }
         /// <summary>
         /// Override this for per-tick behavior.

@@ -28,7 +28,16 @@ namespace FuzzPhyte.Tools
     }
     #endregion
     #region Equipment Related
+    public interface IFPContainedItem
+    {
+        string ItemId { get; }
+        void OnEnteredEquipment(FP_EquipmentBase equipment);
+        void OnExitedEquipment(FP_EquipmentBase equipment);
 
+        // Additional properties/methods as needed
+        void OnEquipmentStateChanged(FP_EquipmentBase equipment, EquipmentStatus status);
+        void OnEquipmentTick(FP_EquipmentBase equipment, EquipmentStatus status, float dt);
+    }
     public enum EquipmentPowerState
     {
         NA,
@@ -96,6 +105,8 @@ namespace FuzzPhyte.Tools
 
         [Range(0,1)]
         public float NormalizedLevel;
+        [Tooltip("If we want to pass some value of 'heat' or 'intensity' or whatever the equipment could be producing")]
+        public float EmitPowerUnit;
         public float TimerRemainingSec;
         public EquipmentFillState Fill;
         public List<string> ContainedItemIds;

@@ -17,7 +17,7 @@ namespace FuzzPhyte.Tools
 
         // Similar to FP_Tool: CurrentState + allowed transitions
         protected Dictionary<EquipmentPowerState, HashSet<EquipmentPowerState>> powerTransitions;
-
+        protected readonly List<IFPContainedItem> _containedItems = new List<IFPContainedItem>();
         protected virtual void Awake()
         {
             BuildDefaultTransitions();
@@ -40,6 +40,7 @@ namespace FuzzPhyte.Tools
                 Condition = EquipmentConditionState.OK,
                 NormalizedLevel = 0f,
                 TimerRemainingSec = 0f,
+                EmitPowerUnit = 1f,
                 Fill = EquipmentFillState.Empty,
                 ContainedItemIds= new List<string>()
             };
@@ -47,6 +48,45 @@ namespace FuzzPhyte.Tools
             Emit();
         }
 
+        public void AddItemToEquipment(IFPContainedItem item)
+        {
+            AddContainedItem(item);
+        }
+        public void RemoveItemFromEquipment(IFPContainedItem item)
+        {
+            RemoveContainedItem(item);
+        }
+
+        protected virtual void AddContainedItem(IFPContainedItem item)
+        {
+            if (item == null) return;
+            if (_containedItems.Contains(item)) return;
+            _containedItems.Add(item);
+            item.OnEnteredEquipment(this);
+
+            SyncContainedItemStatus();
+            Emit();
+        }
+        protected virtual void RemoveContainedItem(IFPContainedItem item)
+        {
+            if (item == null) return;
+            if (!_containedItems.Contains(item)) return;
+            _containedItems.Remove(item);
+            item.OnExitedEquipment(this);
+            SyncContainedItemStatus();
+            Emit();
+        }
+        /// <summary>
+        /// Syncs our Status.ContainedItemIds with the current contained items.
+        /// </summary>
+        private void SyncContainedItemStatus()
+        {
+            _status.ContainedItemIds.Clear();
+            foreach (var item in _containedItems)
+            {
+                _status.ContainedItemIds.Add(item.ItemId);
+            }
+        }
         public void Execute(EquipmentCommand cmd)
         {
             if (_status.Condition == EquipmentConditionState.Broken && cmd.Type != EquipmentCommandType.Repair)
@@ -57,6 +97,7 @@ namespace FuzzPhyte.Tools
 
         protected abstract void HandleCommand(EquipmentCommand cmd);
 
+        protected abstract void UpdateEmittedPowerUnit(float newValue);
         protected bool CanPowerTransitionTo(EquipmentPowerState target)
         {
             // Mirrors FP_Tool.CanTransitionTo(...) dictionary check :contentReference[oaicite:13]{index=13}
@@ -71,7 +112,7 @@ namespace FuzzPhyte.Tools
             return true;
         }
 
-        protected void Emit()
+        protected virtual void Emit()
         {
             OnEvent?.Invoke(new EquipmentEvent
             {
