@@ -105,6 +105,18 @@ namespace FuzzPhyte.Tools.Samples
             };
             Microwave.Execute(resumeTimer);
         }
+        [ContextMenu("Open Door")]
+        public void OpenDoor()
+        {
+            _currentCommand.Type = EquipmentCommandType.OpenDoor;
+            Microwave.Execute(_currentCommand);
+        }
+        [ContextMenu("Close Door")]
+        public void CloseDoor()
+        {
+            _currentCommand.Type = EquipmentCommandType.CloseDoor;
+            Microwave.Execute(_currentCommand);
+        }
         /// <summary>
         /// Just use Late Update at the moment
         /// </summary>

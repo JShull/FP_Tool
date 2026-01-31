@@ -71,6 +71,8 @@ namespace FuzzPhyte.Tools
         PauseTimer,
         ResumeTimer,
         InterfaceActions,
+        OpenDoor,
+        CloseDoor
     }
     [System.Serializable]
     public struct EquipmentCommand

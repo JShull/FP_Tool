@@ -16,7 +16,7 @@ namespace FuzzPhyte.Tools
         public TimerData ActiveTimer => _activeTimer;
         [SerializeField] private float _pausedRemainingTime = 0f;
         [SerializeField] private bool _isPaused = false;
-
+        [SerializeField] private bool _doorOpen = false;
         [Header("Microwave Events")]
         public MicrowaveEvent OnStarted;
         public MicrowaveEvent OnPaused;
@@ -26,6 +26,8 @@ namespace FuzzPhyte.Tools
         public MicrowaveEvent OnFinished;
         public MicrowaveEvent OnBroken;
         public MicrowaveEvent OnRepaired;
+        public MicrowaveEvent OnDoorOpen;
+        public MicrowaveEvent OnDoorClose;
 
         protected override void BuildDefaultTransitions()
         {
@@ -77,10 +79,9 @@ namespace FuzzPhyte.Tools
                     OnButtonsPushed?.Invoke(this);
                     break;
                 case EquipmentCommandType.SetPowerOn:
-                    Debug.LogWarning("Microwave requires a timerto run.");
+                    Debug.LogWarning("Microwave requires a timer to run.");
                     //SetPower(EquipmentPowerState.On);
                     break;
-
                 case EquipmentCommandType.SetPowerOff:
                     CancelTimerInternal();
                     SetPower(EquipmentPowerState.Off);
@@ -88,6 +89,10 @@ namespace FuzzPhyte.Tools
 
                 case EquipmentCommandType.StartTimerSeconds:
                     if (data != null && !data.SupportsTimer) return;
+                    if (_doorOpen)
+                    {
+                        return;
+                    }
                     StartTimer(cmd.FValue);
                     break;
 
@@ -96,7 +101,6 @@ namespace FuzzPhyte.Tools
                     if (_status.Power == EquipmentPowerState.OnWithTimer)
                         SetPower(EquipmentPowerState.On);
                     break;
-
                 case EquipmentCommandType.Break:
                     CancelTimerInternal();
                     _status.Condition = EquipmentConditionState.Broken;
@@ -111,9 +115,28 @@ namespace FuzzPhyte.Tools
                 case EquipmentCommandType.PauseTimer:
                     PauseTimerInternal();
                     break;
-
                 case EquipmentCommandType.ResumeTimer:
-                    ResumeTimerInternal();
+                    if (!_doorOpen)
+                    {
+                        ResumeTimerInternal();
+                    }
+                    break;
+                case EquipmentCommandType.OpenDoor:
+                    if (!_doorOpen)
+                    {
+                        Debug.LogWarning("Microwave door opened.");
+                        PauseTimerInternal();
+                        _doorOpen = true;
+                        OnDoorOpen?.Invoke(this);
+                    }
+                    break;
+                case EquipmentCommandType.CloseDoor:
+                    if (_doorOpen)
+                    {
+                        Debug.LogWarning("Microwave door closed.");
+                        _doorOpen = false;
+                        OnDoorClose?.Invoke(this);
+                    }
                     break;
             }
         }
@@ -139,7 +162,6 @@ namespace FuzzPhyte.Tools
             }
             OnStarted?.Invoke(this);
         }
-
         private void OnTimerFinished()
         {
             _activeTimer = null;
@@ -189,8 +211,6 @@ namespace FuzzPhyte.Tools
             Emit();
             OnResumed?.Invoke(this);
         }
-
-
         private void CancelTimerInternal()
         {
             if (_activeTimer != null && FP_Timer.CCTimer != null)
