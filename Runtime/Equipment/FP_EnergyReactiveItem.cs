@@ -2,7 +2,7 @@ namespace FuzzPhyte.Tools
 {
     using UnityEngine;
     using UnityEngine.Events;
-    public class FP_EnegyReactiveItem : MonoBehaviour,IFPContainedItem
+    public class FP_EnergyReactiveItem : MonoBehaviour,IFPContainedItem
     {
         [SerializeField] private string itemId;
         public string ItemId => itemId;

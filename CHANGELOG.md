@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-02-02
+
+### 0.6.0 Added
+
+- [@JShull](https://github.com/jshull)
+  - Samples Updated to include SamplesEquip
+  - FP_EnergyReactiveItem.cs
+    - Allows a way to pass information from our equipment to something that might want to know based on trigger collision enter/exit
+
 ## [0.5.0] - 2026-01-27
 
 ### 0.5.0 Added
