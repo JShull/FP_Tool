@@ -17,6 +17,8 @@ namespace FuzzPhyte.Tools
         [SerializeField] private float _pausedRemainingTime = 0f;
         [SerializeField] private bool _isPaused = false;
         [SerializeField] private bool _doorOpen = false;
+        public bool IsDoorOpen => _doorOpen;
+
         [SerializeField] private float _powerPerEmit = 10f;
         [Header("Microwave Events")]
         public MicrowaveEvent OnStarted;
