@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-03-24
+
+### 0.6.1 Changed
+
+- [@JShull](https://github.com/jshull)
+  - FP_PanMove.cs
+    - Updated `DeactivateToolFromUI()` to override the base implementation for Unity 6.4 compatibility
+
 ## [0.6.0] - 2026-02-02
 
 ### 0.6.0 Added
