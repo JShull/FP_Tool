@@ -514,7 +514,7 @@ namespace FuzzPhyte.Tools.Connections
         /// <summary>
         /// Some additional UI reference to deactivate something if we needed it
         /// </summary>
-        public void DeactivateToolFromUI()
+        public override void DeactivateToolFromUI()
         {
             ForceDeactivateTool();
         }
