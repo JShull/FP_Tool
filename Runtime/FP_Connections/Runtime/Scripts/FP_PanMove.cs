@@ -40,6 +40,17 @@ namespace FuzzPhyte.Tools.Connections
         [SerializeField]
         [Tooltip("This will cache our current selected item")]
         protected GameObject selectedItem;
+        #region Point click Parameters
+        [SerializeField]
+        [Tooltip("If true, we point click and ignore dragging")]
+        protected bool usePointClick = false;
+        [SerializeField]
+        [Tooltip("Possible end point of the initial item we selected")]
+        protected GameObject clickedStartPoint;
+        [SerializeField]
+        [Tooltip("This is the cached item that we are going to move towards")]
+        protected GameObject clickedEndPoint;
+        #endregion
         [SerializeField]
         protected FP_MoveRotateItem selectedItemDetails;
         protected IFPUIEventListener<FP_Tool<PartData>> selectedItemInterface;
@@ -226,18 +237,57 @@ namespace FuzzPhyte.Tools.Connections
                         var FPMRItem = potentialHit.collider.gameObject.GetComponent<FP_CollideItem>();
                         if(FPMRItem!=null)
                         {
-                            selectedItemDetails=FPMRItem.MoveRotateItem;
-                            if (selectedItemDetails == null)
+
+                            //click point mode
+                            #region Click Point Code
+                            if (usePointClick && clickedStartPoint == null)
+                            {
+                                clickedStartPoint = FPMRItem.OnToolSelectionReturnClosestEndPoint(eventData);
+                                selectedItem = FPMRItem.OnToolSelectionReturnRootGameObject();
+                                if (selectedItem == null)
+                                {
+                                    Debug.LogError($"We hit something, {FPMRItem.gameObject.name}, and it didn't have a root gameobject, in this mode we need one to continue!");
+                                    return;
+                                }
+
+                                //Debug?
+                                Debug.LogWarning($"Currently ending due to First Interaction OnClickPoint:");
+                                return;
+                            }
+                            else if (usePointClick && clickedStartPoint != null && clickedEndPoint == null)
+                            {
+                                //second click sequence
+                                clickedEndPoint = FPMRItem.OnToolSelectionReturnClosestEndPoint(eventData);
+                                if(clickedEndPoint == null)
+                                {
+                                    Debug.LogError($"We hit something, {FPMRItem.gameObject.name}, and it didn't have a way to give us the closest end point!");
+                                    return;
+                                }
+                                //jump the part on up?
+                                
+                                Debug.LogWarning($"Currently ending due to Second Interaction OnClickPoint");
+                                return;
+                            }
+
+
+                            #endregion
+                            selectedItemDetails = FPMRItem.MoveRotateItem;
+                            if (selectedItemDetails == null && !usePointClick)
                             {
                                 Debug.LogError($"We hit something, {FPMRItem.gameObject.name}, and it didn't have a FP_MoveRotateItem component, we need one to continue!");
                                 return;
                             }
-                            selectedItem = selectedItemDetails.gameObject;
-                            //update cached parameters
+                            // NORMAL MODE
+                            if (!usePointClick)
+                            {
+                                selectedItem = selectedItemDetails.gameObject;
+                            }
+
+                           
+                            
+                                //update cached parameters
                             mouseForwardROTStartVector = ToolCamera.ScreenPointToRay(mouseDownStartScreenCoordinate).direction.normalized;
-                            
-                            
-                            
+
                             //we don't exactly know what sort of part we have here but we know that we can check the interface to pass our eventData now to the connection logic on the part
                             //this in theory grabs the one/only 'IFPUIEventListener' interface that is being used on the selectedItem object
                             //at this moment, this is casting through the interface and hitting 'ConnectionPart.cs' and we're just sending/passing our information over there
@@ -267,7 +317,11 @@ namespace FuzzPhyte.Tools.Connections
                             
                             //wrap up
                             isMoving = true;
-                            selectedItemDetails.InteractionStarted();
+                            if (selectedItemDetails!=null)
+                            {
+                                selectedItemDetails.InteractionStarted();
+                            }
+                                
                             //if we are rotating or moving?
                             if (eventData.button == PointerEventData.InputButton.Left) 
                             {
@@ -296,6 +350,10 @@ namespace FuzzPhyte.Tools.Connections
             if(UseTool())
             {
                 //check lock state
+                if (usePointClick)
+                {
+                    return;
+                }
                 if (selectedItem != null)
                 {
                     var toolInterface = selectedItem.GetComponent<IFPTool>();
@@ -400,49 +458,74 @@ namespace FuzzPhyte.Tools.Connections
             if (EndTool())
             {
                 //check our actual item to see if we somehow got locked while in some sort of manuever - HIGHLY Unlikely but still possible
-                if (selectedItem != null)
+                if (usePointClick)
                 {
-                    var toolInterface = selectedItem.GetComponent<IFPTool>();
-                    if (toolInterface != null)
+                    if(clickedStartPoint != null && clickedEndPoint != null && selectedItem!=null)
                     {
-                        //if this is using the IFPTool interface we want to confirm we aren't in a locked state - everything else is fine
-                        if (toolInterface.ReturnState() == FPToolState.Locked)
-                        {
-                            DeactivateTool();
-                            selectedItem = null;
-                            selectedItemDetails = null;
-                            isMoving = false;
-                            useRotation = false;
-                            return;
-                        }
+                        //we have all the information we need to move
+                        var offset = clickedEndPoint.transform.position - clickedStartPoint.transform.position;
+                        selectedItem.transform.position += offset;
+                        //root.position += offset;
+
+
+                        //reset
+                        DeactivateTool();
+                        selectedItem = null;
+                        selectedItemDetails = null;
+                        clickedStartPoint = null;
+                        clickedEndPoint = null;
+                        isMoving = false;
+                        useRotation = false;
+                        return;
                     }
                 }
                 else
                 {
+                    if (selectedItem != null)
+                    {
+                        var toolInterface = selectedItem.GetComponent<IFPTool>();
+                        if (toolInterface != null)
+                        {
+                            //if this is using the IFPTool interface we want to confirm we aren't in a locked state - everything else is fine
+                            if (toolInterface.ReturnState() == FPToolState.Locked)
+                            {
+                                DeactivateTool();
+                                selectedItem = null;
+                                selectedItemDetails = null;
+                                isMoving = false;
+                                useRotation = false;
+                                return;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        DeactivateTool();
+                        selectedItem = null;
+                        selectedItemDetails = null;
+                        isMoving = false;
+                        useRotation = false;
+                        return;
+                    }
+                    // check if we have our interface
+                    if (selectedItemInterface != null)
+                    {
+                        selectedItemInterface.PointerUp(eventData);
+                    }
+                    else
+                    {
+                        DeactivateTool();
+                        selectedItem = null;
+                        selectedItemDetails = null;
+                        isMoving = false;
+                        useRotation = false;
+                        return;
+                    }
+                    selectedItemDetails.InteractionEnded();
+                    OnToolDropItemUnityEvent.Invoke();
                     DeactivateTool();
-                    selectedItem = null;
-                    selectedItemDetails = null;
-                    isMoving = false;
-                    useRotation = false;
-                    return;
                 }
-                // check if we have our interface
-                if (selectedItemInterface != null)
-                {
-                    selectedItemInterface.PointerUp(eventData);
-                }
-                else
-                {
-                    DeactivateTool();
-                    selectedItem = null;
-                    selectedItemDetails = null;
-                    isMoving = false;
-                    useRotation = false;
-                    return;
-                }
-                selectedItemDetails.InteractionEnded();
-                OnToolDropItemUnityEvent.Invoke();
-                DeactivateTool();
+                
             }
             else
             {
@@ -453,6 +536,11 @@ namespace FuzzPhyte.Tools.Connections
             selectedItemDetails = null;
             isMoving = false;
             useRotation = false;
+            if (usePointClick)
+            {
+                clickedStartPoint = null;
+                clickedEndPoint = null;
+            }
         }
         public virtual void ResetVisuals()
         {

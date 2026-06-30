@@ -35,14 +35,15 @@ namespace FuzzPhyte.Tools
 
         public T ToolData => toolData;
         // Dictionary defining allowed transitions
+        // John 6-30-2026 added Ending state to allowed transitions from Starting. This is in scenarios where no dragging occurs and the tool is immediately released.
         protected Dictionary<FPToolState, HashSet<FPToolState>> allowedTransitions = new Dictionary<FPToolState, HashSet<FPToolState>>
         {
             { FPToolState.Unlocked,    new HashSet<FPToolState> { FPToolState.Activated,    FPToolState.Locked,     FPToolState.Deactivated } },
             { FPToolState.Locked,      new HashSet<FPToolState> { FPToolState.Unlocked,     FPToolState.Locked,     FPToolState.Deactivated } },
             { FPToolState.Deactivated, new HashSet<FPToolState> { FPToolState.Activated,    FPToolState.Locked,     FPToolState.Deactivated } },
             { FPToolState.Activated,   new HashSet<FPToolState> { FPToolState.Starting,     FPToolState.Locked,     FPToolState.Deactivated } },
-            { FPToolState.Starting,    new HashSet<FPToolState> { FPToolState.ActiveUse,    FPToolState.Locked,     FPToolState.Deactivated } },
-            { FPToolState.ActiveUse,   new HashSet<FPToolState> { FPToolState.ActiveUse,    FPToolState.Locked,     FPToolState.Ending,     FPToolState.Deactivated } },
+            { FPToolState.Starting,    new HashSet<FPToolState> { FPToolState.ActiveUse,    FPToolState.Locked,     FPToolState.Deactivated,    FPToolState.Ending } },
+            { FPToolState.ActiveUse,   new HashSet<FPToolState> { FPToolState.ActiveUse,    FPToolState.Locked,     FPToolState.Ending,         FPToolState.Deactivated } },
             { FPToolState.Ending,      new HashSet<FPToolState> { FPToolState.Activated,    FPToolState.Locked,     FPToolState.Deactivated } },
         };
 
