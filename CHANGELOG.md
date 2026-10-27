@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `FP_EquipmentSink` with independent hot/cold knobs, flow and condition events,
+  existing equipment commands, explicit liquid/item fill state, and Edit Mode tests.
+
 ## [0.6.2] - 2026-06-04
 
 ### 0.6.2 Added

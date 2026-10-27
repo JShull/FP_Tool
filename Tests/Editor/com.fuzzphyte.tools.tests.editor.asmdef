@@ -1,0 +1,7 @@
+{
+    "name": "com.fuzzphyte.tools.tests.editor",
+    "rootNamespace": "FuzzPhyte.Tools.Tests",
+    "references": ["com.fuzzphyte.tools", "com.fuzzphyte.utility"],
+    "includePlatforms": ["Editor"],
+    "optionalUnityReferences": ["TestAssemblies"]
+}

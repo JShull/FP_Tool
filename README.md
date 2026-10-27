@@ -48,6 +48,32 @@ Is a separate package that just extends and utilizes the FP_SystemBase as well a
 
 **FPGenericGameUtility**: When you derive from the FPGenericGameUtility class you are not only inheriting this interface, but a series of functions, internal parameters, delegates, audio, and UI related needs for just about any simple game. As this class extends the FPSystemBase, it can get a little confusing on who does what but once you understand that FPSystemBase is only responsible for setting us up as an instance, making sure we have the right data (initialized), as well as managing Awake/Start/OnDestroy and a faked after end of frame function -- AfterLateUpdate() (which isn't really needed); whereas FPGenericGameUtility is then stepping in and managing the entire state of the 'game' and also offers a way to override Start/Update/FixedUpdate/LateUpdate but doesn't touch Awake as well as manages a Clock if you have one. When you extend/derive from here, what you are saying is that you really are only focusing in on using this as an instance and then harnessing the event states tied to the delegates as you need them.
 
+## Hot / Cold Sink
+
+`FP_EquipmentSink` extends `FP_EquipmentTickableBase`. Bind the two knobs to
+`SetHotWaterOn(bool)` / `SetColdWaterOn(bool)`, or their `ToggleHotWater()` /
+`ToggleColdWater()` methods. Either open knob means `EquipmentPowerState.On`;
+both closed means `Off`. Both knobs start closed.
+
+Use `OnStarted` / `OnStopped` for shared running-water audio and particles, and
+`OnHotWaterOn`, `OnHotWaterOff`, `OnColdWaterOn`, `OnColdWaterOff` for individual
+knob feedback. These Inspector events pass the sink and fire only on transitions.
+`OnStateChanged` also reports initialization and contents changes. The inherited
+`OnEvent` and contained-item state/tick callbacks remain available.
+
+Existing `SetPowerOn` commands open cold water; `SetPowerOff` closes both knobs;
+`TogglePower` switches between those behaviors. `Break` sets `Broken` and closes
+both knobs. `Repair` restores `OK` without reopening them. Broken sinks reject
+opening requests. Disabling the component closes both knobs and stops effects.
+
+Use inherited `AddItemToEquipment` / `RemoveItemFromEquipment` for items and
+`SetContainsLiquid(bool)` for basin liquid. Fill reports `Empty`, `ContainsItem`,
+`ContainsLiquid`, or `MixedContents`. Flow does not automatically fill the basin.
+This initial sink does not simulate temperature, drainage, or energy transfer
+(`EmitPowerUnit` is zero). No new equipment enums or runtime dependencies are added.
+The inherited tick setup requires `FP_TickSystem` when automatic registration is
+enabled; ticking is only needed here for contained-item callbacks.
+
 ## FP_Tool Dependencies
 
 Please see the [package.json](./package.json) file for more information.
