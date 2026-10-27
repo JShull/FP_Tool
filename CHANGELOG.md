@@ -5,9 +5,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.6.2] - 2026-10-26
 
-### Added
+### [0.6.2] Added
 
 - `FP_EquipmentSink` with independent hot/cold knobs, flow and condition events,
   existing equipment commands, explicit liquid/item fill state, and Edit Mode tests.
