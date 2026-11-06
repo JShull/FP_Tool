@@ -3,6 +3,7 @@
     "rootNamespace": "FuzzPhyte.Tools.Editor",
     "references": [
         "com.fuzzphyte.tools",
+        "com.fuzzphyte.utility",
         "Unity.TextMeshPro",
         "UnityEngine.UI"
     ],

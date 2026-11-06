@@ -25,7 +25,10 @@ namespace FuzzPhyte.Tools
         [SerializeField, Min(0f)] private float waterMl;
         [Header("Cup")]
         [SerializeField] private bool requireCup;
-        [SerializeField] private bool cupPresent;
+        [Tooltip("Used only when Require Cup is enabled. Place this region beneath the spout.")]
+        [SerializeField] private FP_CupRegion cupRegion;
+        [SerializeField, HideInInspector] private bool cupPresent;
+        private bool _hasUsedCupRegion;
 
         private float _cycleDuration;
         private float _cycleVolumeMl;
@@ -62,6 +65,9 @@ namespace FuzzPhyte.Tools
         {
             if (!isActiveAndEnabled || _poweringOff || IsBrewing || _status.Condition == EquipmentConditionState.Broken ||
                 !IsPositiveFinite(seconds)) return;
+            RefreshCupPresence();
+            if (IsBrewing || _poweringOff || !isActiveAndEnabled ||
+                _status.Condition == EquipmentConditionState.Broken) return;
             bool missingBeans = !HasBeans;
             bool missingWater = !HasWater;
             bool missingCup = requireCup && !cupPresent;
@@ -131,6 +137,26 @@ namespace FuzzPhyte.Tools
 
         public void SetCupPresent(bool present)
         {
+            // Preserve manual detector integrations only when no region owns detection.
+            if (cupRegion != null || _hasUsedCupRegion) return;
+            UpdateCupPresence(present);
+        }
+
+        private void RefreshCupPresence()
+        {
+            if (!isActiveAndEnabled || !requireCup) return;
+            if (cupRegion != null)
+            {
+                _hasUsedCupRegion = true;
+                UpdateCupPresence(cupRegion.HasCup);
+            }
+            else if (_hasUsedCupRegion) UpdateCupPresence(false);
+        }
+
+        private void LateUpdate() => RefreshCupPresence();
+
+        private void UpdateCupPresence(bool present)
+        {
             if (cupPresent == present) return;
             cupPresent = present;
             if (requireCup && !present && IsBrewing)
@@ -143,6 +169,7 @@ namespace FuzzPhyte.Tools
 
         protected override void OnTick(float dt)
         {
+            RefreshCupPresence();
             if (!isActiveAndEnabled || !IsBrewing || !IsPositiveFinite(dt)) return;
             uint cycle = _cycleVersion;
             _status.TimerRemainingSec = Mathf.Max(0f, _status.TimerRemainingSec - dt);

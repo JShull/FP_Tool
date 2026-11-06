@@ -170,10 +170,34 @@ All events below are Inspector UnityEvents passing the coffee maker:
 | `OnBroken` / `OnRepaired` | Condition feedback; repair leaves the machine off. |
 | `OnStateChanged` | General equipment display refresh and inherited state updates. |
 
-For the cup under the spout, optionally enable Require Cup and call
-`SetCupPresent(true/false)` from your cup/socket detector. Cup presence is explicit;
-the generic item containment volume does not identify cups. Without Require Cup,
-the maker can brew freely. If enabled, removing the cup cancels immediately.
+### Cup detection
+
+1. Add `FP_Cup` to the cup root. Put its 3D colliders on that object or children;
+   the nearest cup marker owns each collider. Multiple colliders count as one
+   presence, and any remaining cup keeps the region occupied.
+2. Create a child beneath the spout with `FP_CupRegion` and one `BoxCollider`.
+   The component sets the box to a trigger when initialized. Adjust its Center
+   and Size to cover the valid cup position; a cyan wire box appears when selected.
+   Use a transform hierarchy without shear (nonuniformly scaled rotated parents).
+3. Enable **Require Cup** on `FP_EquipmentCoffeeMaker` and assign **Cup Region**.
+   Optionally restrict the region's **Cup Layers** to your cup collider layers.
+   Layer filtering applies to the collider GameObjects, not only the marked root.
+
+The coffee maker queries the region only when Require Cup is enabled, before
+starting, before advancing a brew, and in LateUpdate. Unchecking Require Cup
+ignores the region completely. This uses box-overlap queries in the region's
+physics scene, so a stationary cup already inside is detected and no trigger-event
+wiring or Rigidbody is required for detection. Position changes follow Unity's
+physics transform synchronization timing. Ordinary unmarked objects are ignored.
+Disabled/inactive/destroyed cups, disabled colliders, and disabled/destroyed regions
+cannot retain a stale positive reading. Removing the last valid cup cancels brewing
+and fires OnNoCup; disabling/re-enabling a region redetects stationary cups.
+This checks overlap, not whether a cup is upright or correctly aligned with the spout.
+
+Existing manual `SetCupPresent(true/false)` integrations remain supported when no
+region has been assigned/used. Once a region owns detection, it is authoritative;
+manual calls cannot override an empty or lost region. `IsCupPresent` exposes the
+last sampled state. Without Require Cup, the maker can brew freely.
 
 Existing commands map as follows: `InterfaceActions` starts the default recipe;
 `StartTimerSeconds` uses `FValue` as the duration; `CancelTimer` cancels;
@@ -182,8 +206,16 @@ disabled maker cannot start. No new command enums or package dependencies are ad
 `EmitPowerUnit` stays zero, so contained energy-reactive items are not heated.
 The existing contained-item callbacks remain available. Edit Mode tests cover
 recipes, shortages, events, commands, cancellation and callback re-entry; a Play
-Mode test covers automatic ticking and disable/re-enable registration. Wire and
-check the actual scene's cup detector, animations, particles, and audio separately.
+Mode tests cover automatic ticking, disable/re-enable registration, and cup-region
+detection in an isolated physics scene. Check the actual scene's region placement,
+animations, particles, and audio separately.
+
+## Particle bean refill sample
+
+See [Samples/BeanPour](Samples/BeanPour/README.md) for a wired prefab with
+angle-controlled particle pouring into a coffee maker's bean region. It includes
+`FP_TipParticlePour`, `FP_BeanParticleTrigger`, and `FP_BeanFillRegion`, with setup,
+prototype controls, per-particle mass, and integration instructions.
 
 ## FP_Tool Dependencies
 

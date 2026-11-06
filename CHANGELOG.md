@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Tip-controlled bean particle pouring, hopper particle-trigger receivers, and a
+  documented `Samples/BeanPour/FP_BeanPourPrototype.prefab` with wired references.
+- `FP_Cup` and `FP_CupRegion` for automatic coffee-maker cup detection, a referenced
+  region used only when Require Cup is enabled, compound cup colliders, and
+  stationary-cup/lifecycle handling with Edit Mode and Play Mode tests.
 - `FP_EquipmentCoffeeMaker` with timed brewing, beans/water quantities and refills,
   optional cup gating, start/brewing/progress/finish/cancel/shortage/condition events,
   existing command support, and Edit Mode/Play Mode tests.
