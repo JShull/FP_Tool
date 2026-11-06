@@ -19,7 +19,8 @@ namespace FuzzPhyte.Tools.Tests
             _object = new GameObject("Sink test");
             _sink = _object.AddComponent<FP_EquipmentSink>();
             // Edit Mode does not guarantee MonoBehaviour Awake execution.
-            _object.SendMessage("Awake");
+            typeof(FP_EquipmentSink).GetMethod("Awake",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).Invoke(_sink, null);
         }
 
         [TearDown]
@@ -97,7 +98,8 @@ namespace FuzzPhyte.Tools.Tests
             Assert.That(_sink.IsRunning, Is.False);
             _sink.SetHotWaterOn(true);
             _sink.enabled = false;
-            _object.SendMessage("OnDisable");
+            typeof(FP_EquipmentSink).GetMethod("OnDisable",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).Invoke(_sink, null);
             Assert.That(_sink.IsRunning, Is.False);
             Assert.That(_sink.IsHotWaterOn, Is.False);
         }

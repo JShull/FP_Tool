@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `FP_EquipmentScale`, `FP_WeightedItem`, and `FP_ScaleContainmentVolume` for
+  event-driven multi-item weight totals, compound colliders, overlapping volumes,
+  and contact cleanup. Uses existing equipment commands without a tick dependency.
+- `FP_ScaleDisplay` TextMeshPro binding, scale setup documentation, and Edit Mode tests.
+- A scale creation menu with a wired world-space UI panel, plus a Play Mode
+  physics/display integration test. Sink tests use direct lifecycle invocation
+  to avoid Unity 6.6 Edit Mode `SendMessage` assertions.
+
 ## [0.6.2] - 2026-10-26
 
 ### [0.6.2] Added

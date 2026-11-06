@@ -74,6 +74,62 @@ This initial sink does not simulate temperature, drainage, or energy transfer
 The inherited tick setup requires `FP_TickSystem` when automatic registration is
 enabled; ticking is only needed here for contained-item callbacks.
 
+## Scale
+
+`FP_EquipmentScale` extends the same `FP_EquipmentBase` used by the microwave and
+sink. It totals distinct `FP_WeightedItem` components in kilograms. Each item has
+an authored weight independent of `Rigidbody.mass`; call `SetWeightKg(float)` to
+change it while contained. Negative and non-finite inputs become zero. Totals use
+double accumulation of the authored float values, with rounding only for display.
+This is an interactive mass readout, not a simulation of force or load distribution.
+
+### Setup
+
+Use **GameObject > FuzzPhyte > Equipment > Scale** to create a platform, weighing
+volume, and wired world-space TextMeshPro panel. The created hierarchy is editable
+and supports Undo. Alternatively, assemble an existing scale model as follows.
+
+1. Add `FP_EquipmentScale` to the scale root. It starts powered on and needs no
+   `FP_TickSystem` or timer.
+2. Add a child with one 3D trigger collider and `FP_ScaleContainmentVolume`. Assign
+   its Scale reference and size the trigger above the platform. Use this volume
+   instead of `FP_EquipmentContainmentVolume` for weighing. Multiple child volumes
+   can reference the same scale; each volume must have exactly one trigger collider.
+3. Add `FP_WeightedItem` to each item root and set Weight Kg and optional Item Id.
+   Colliders may be on that object or children; the nearest weighted ancestor owns
+   each collider. Multiple colliders and overlapping volumes count the item once.
+   Give movable items a Rigidbody; Unity's physics layer collision matrix must
+   allow the trigger pair. Trigger callbacks require a Rigidbody on at least one
+   participant. The item can also carry `FP_EnergyReactiveItem` for microwave use;
+   the scale-specific volume looks explicitly for the weight component.
+4. Add `FP_ScaleDisplay` to a UI panel and assign the Scale and a TextMeshPro label.
+   A world-space Canvas works for a display mounted on the scale. The binder
+   initializes on enable and updates through `OnStateChanged`; no UI polling is
+   required. Decimal Places controls formatting (default `0.000 kg`).
+
+`TotalWeightKg`, `ItemCount`, `OnWeightChanged`, and `OnStateChanged` are available
+for other UI or interactions. Inspector events pass the scale. `OnWeightChanged`
+fires only when the numeric total changes; `OnStateChanged` also covers zero-mass
+items and equipment state. Standard power, toggle, break, and repair commands work.
+Power off or broken shows `-- kg`; contents continue to be tracked. Repair leaves
+power off until explicitly switched on. No heat or energy is emitted.
+
+Disabled/destroyed items are removed; disabled/destroyed colliders are pruned by
+the volume. Disabling a volume releases its contacts, and disabling the scale
+clears its contents and subscriptions. Known collider contacts recover after
+re-enabling even with sleeping rigidbodies; `OnTriggerStay` recovers untracked
+overlaps on the next physics callback. Contact entry/exit follows Unity
+physics timing. Keep the assigned Scale reference stable while contacts are active.
+Direct `AddItemToEquipment` / `RemoveItemFromEquipment` calls also support weighted
+items for non-physics integrations; use either manual ownership or trigger ownership
+for a given item, since a last-volume exit removes it.
+
+The existing microwave/sink containment behavior is unchanged. Scale Edit Mode
+tests cover aggregation, weight changes, collider ownership, overlapping volumes,
+lifecycle cleanup, validation, events, and power/condition behavior. A Play Mode
+integration test exercises actual 3D trigger contacts and display updates. UI
+placement and device acceptance must also be checked in the consuming project.
+
 ## FP_Tool Dependencies
 
 Please see the [package.json](./package.json) file for more information.

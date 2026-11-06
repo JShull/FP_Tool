@@ -2,7 +2,9 @@
     "name": "com.fuzzphyte.tools.editor",
     "rootNamespace": "FuzzPhyte.Tools.Editor",
     "references": [
-        "com.fuzzphyte.tools"
+        "com.fuzzphyte.tools",
+        "Unity.TextMeshPro",
+        "UnityEngine.UI"
     ],
     "includePlatforms": [
         "Editor"
