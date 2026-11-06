@@ -210,6 +210,70 @@ Mode tests cover automatic ticking, disable/re-enable registration, and cup-regi
 detection in an isolated physics scene. Check the actual scene's region placement,
 animations, particles, and audio separately.
 
+## Toaster
+
+Add `FP_EquipmentToaster` to the toaster root. Create a child for the slot region
+with one 3D trigger collider and `FP_ToasterContainmentVolume`, then assign its
+Toaster reference. One region may cover both slots, or multiple regions may
+reference the same toaster. They share one cycle. Add `FP_EnergyReactiveItem` to
+each bread/item root; colliders may be on that object or children. The nearest
+energy-reactive ancestor owns each collider. The region uses OnTriggerEnter/Exit
+like the microwave, with OnTriggerStay recovery and cleanup for contacts that
+disappear without an exit. Multiple colliders and overlapping regions count each
+item once. Unity's trigger setup needs a Rigidbody on at least one participant and
+compatible physics layers. Use `Rigidbody.MovePosition` for physics-driven movement;
+entry and exit follow Unity's physics callbacks. Disabling a region releases its
+items. Re-enabled regions acquire overlaps on subsequent Enter/Stay callbacks.
+
+Bind a 0–1 UI slider to `SetToastLevel(float)`, the lever/start control to
+`StartToasting()`, and the stop/eject button to `StopToasting()`. Level 0 uses
+Light Toast Seconds (default 5 s); level 1 uses Dark Toast Seconds (default 30 s).
+Intermediate levels interpolate duration. Level changes during a cycle apply to
+the next cycle; they do not reset the active timer. `ToastLevel` and
+`Status.NormalizedLevel` expose the selected setting, `ToastProgress01` exposes
+cycle progress, and `Status.TimerRemainingSec` exposes remaining time.
+
+| Event | Use |
+| --- | --- |
+| `OnToastLevelChanged` | Update the knob/slider display. |
+| `OnItemEntered` / `OnItemExited` | Entry/exit feedback; the existing item OnEnteredEquipment/OnExitedEquipment callbacks also run. |
+| `OnContentsChanged` | Refresh slot occupancy using ItemCount or Status.ContainedItemIds. |
+| `OnStarted` | Accepted start/lever-down feedback. |
+| `OnToasting` | Once per cycle: start heating glow and looping audio. |
+| `OnToastProgress` | Each advancing tick: update cycle display/animation. |
+| `OnFinished` | Successful end: stop effects and animate pop-up. |
+| `OnCancelled` | User stop, last item removed, disable, power-off, or break: stop effects/eject feedback. |
+| `OnNoItem` | Start rejected because no valid item is inside. |
+| `OnBroken` / `OnRepaired` | Condition feedback; repair does not restart. |
+| `OnStateChanged` | General equipment status updates. |
+
+Inspector events pass the toaster. Finishing/stopping does not physically move or
+remove items; connect your existing pop/eject animation to those events. Removing
+one of several items leaves the cycle running; removing the last cancels it.
+Newly inserted items receive only the remaining cycle's heat. Disabled/destroyed
+energy components are removed; disabled colliders are pruned by the region.
+
+Use an initialized `FP_TickSystem`, like the microwave. Disabling cancels the cycle,
+clears containment, and unregisters; re-enabling registers again. With automatic
+registration disabled, call `Tick(dt)` from your driver. Heat Per Second (default
+2) is passed through the existing `IFPContainedItem.OnEquipmentTick` callback.
+The final tick is clamped to the remaining cycle time and applies heat before
+completion. State notifications to contained items carry zero EmitPowerUnit to
+avoid `FP_EnergyReactiveItem`'s legacy per-state-notification energy addition;
+the toaster's own Status/OnEvent still exposes active emitted heat. ThresholdReachedEvent
+and MaxThresholdReachedEvent on the energy component can drive bread appearance.
+Energy remains accumulated between cycles; this is an interaction model, not a
+temperature simulation or a guaranteed mapping from level to visible browning.
+
+Commands: SetPowerOn/InterfaceActions start, SetPowerOff/CancelTimer stop,
+TogglePower starts/stops, StartTimerSeconds uses FValue as an explicit duration,
+and SetHeatLevel01 uses FValue as the normalized toast setting. Break/Repair use
+the standard condition behavior. Suggested descriptive equipment data: Supports
+Timer=true, Supports Heat=true, Supports Fill=false, Sub Unit Count=1 for the one
+shared control unit. Physical slot count does not create independent timers.
+The component's own settings control timing and heat; capability flags remain
+descriptive. No new package dependencies are required.
+
 ## Particle bean refill sample
 
 See [Samples/BeanPour](Samples/BeanPour/README.md) for a wired prefab with

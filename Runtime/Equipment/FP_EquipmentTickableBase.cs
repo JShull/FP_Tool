@@ -60,7 +60,7 @@ namespace FuzzPhyte.Tools
         /// Called by FP_TickSystem. Do not override Tick() unless you need to.
         /// Override OnTick(dt) instead.
         /// </summary>
-        public void Tick(float dt)
+        public virtual void Tick(float dt)
         {
             OnTick(dt);
             foreach(var item in _containedItems)

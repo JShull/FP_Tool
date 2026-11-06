@@ -5,9 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.6.4] - 2026-11-06
 
-### Added
+### [0.6.4] Added
+
+- `FP_EquipmentToaster` with a normalized toast setting, timed heat transfer to
+  contained energy-reactive items, entry/exit, start/toasting/progress/finish/cancel
+  events, empty-slot rejection, and break/repair commands.
+- `FP_ToasterContainmentVolume` with trigger enter/exit tracking, child and compound
+  colliders, overlapping slot volumes, and disabled/destroyed contact cleanup.
+- Toaster setup documentation and Edit Mode/Play Mode coverage.
+
+### [0.6.4] Changed
+
+- Package version updated to `0.6.4`.
+- `FP_EquipmentTickableBase.Tick` is virtual so timed equipment can transfer heat
+  for the final partial tick before completing. Existing base behavior is preserved.
+
+## [0.6.3] - 2026-11-06
+
+### [0.6.3] Added
 
 - Tip-controlled bean particle pouring, hopper particle-trigger receivers, and a
   documented `Samples/BeanPour/FP_BeanPourPrototype.prefab` with wired references.
@@ -22,8 +39,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and contact cleanup. Uses existing equipment commands without a tick dependency.
 - `FP_ScaleDisplay` TextMeshPro binding, scale setup documentation, and Edit Mode tests.
 - A scale creation menu with a wired world-space UI panel, plus a Play Mode
-  physics/display integration test. Sink tests use direct lifecycle invocation
-  to avoid Unity 6.6 Edit Mode `SendMessage` assertions.
+  physics/display integration test.
+
+### [0.6.3] Changed
+
+- Sink tests use direct lifecycle invocation to avoid Unity 6.6 Edit Mode
+  `SendMessage` assertions.
 
 ## [0.6.2] - 2026-10-26
 
