@@ -26,6 +26,11 @@
         "displayName": "Equipment Samples",
         "description": "Includes some examples for a 'microwave'",
         "path": "Samples~/SamplesEquip"
+      },
+      {
+        "displayName": "Coffee Bean Pour",
+        "description": "Includes a way to pour beans out",
+        "path": "Samples~/BeanPour"
       }
     ],
     "keywords": [
