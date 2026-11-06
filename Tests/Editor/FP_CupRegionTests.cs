@@ -95,6 +95,28 @@ namespace FuzzPhyte.Tools.Tests
         }
 
         [Test]
+        public void RegionReportsCupArrivalOnceAndIgnoresRegionWhenCupNotRequired()
+        {
+            int present = 0;
+            _maker.OnCupPresent.AddListener(m => present++);
+            var cup = Cup();
+            Set(_maker, "requireCup", false);
+            Invoke(_maker, "LateUpdate");
+            Assert.That(present, Is.Zero);
+            Set(_maker, "requireCup", true);
+            Invoke(_maker, "LateUpdate");
+            Invoke(_maker, "LateUpdate");
+            Assert.That(present, Is.EqualTo(1));
+            cup.transform.localPosition = Vector3.right * 5f;
+            Physics.SyncTransforms();
+            Invoke(_maker, "LateUpdate");
+            cup.transform.localPosition = Vector3.zero;
+            Physics.SyncTransforms();
+            Invoke(_maker, "LateUpdate");
+            Assert.That(present, Is.EqualTo(2));
+        }
+
+        [Test]
         public void MultipleCupsRemainPresentUntilAllLeave()
         {
             var first = Cup();

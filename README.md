@@ -166,9 +166,32 @@ All events below are Inspector UnityEvents passing the coffee maker:
 | `OnCancelled` | Interrupted end: stop brewing effects. Also fires on power-off, break, disable, or required-cup removal during brewing. |
 | `OnNoBeans` / `OnNoWater` | Start rejected because the recipe needs more beans/water; both fire if both are insufficient. |
 | `OnNoCup` | Required cup missing on start, or removed during brewing. |
+| `OnCupPresent` | Once when cup presence changes from absent to present; re-arms on removal. A cup already in the assigned region is reported on the first required-cup check. |
 | `OnSuppliesChanged` | Refill or recipe consumption: update reservoir/hopper indicators. |
+| `OnEnoughBeans` | Once when Beans Grams reaches/exceeds Beans Per Brew Grams; re-arms after dropping below the recipe amount. |
+| `OnBeansFull` | Once when Beans Grams reaches the positive Bean Capacity Grams; re-arms after dropping below capacity. |
+| `OnEnoughWater` | Once when Water Ml reaches/exceeds Water Per Brew Ml; re-arms after dropping below the recipe volume. |
+| `OnWaterFull` | Once when Water Ml reaches the positive Water Capacity Ml; re-arms after dropping below capacity. |
 | `OnBroken` / `OnRepaired` | Condition feedback; repair leaves the machine off. |
 | `OnStateChanged` | General equipment display refresh and inherited state updates. |
+
+Bean threshold events include initial supplies: a maker starting with enough beans
+or a full hopper reports the corresponding event once during initialization.
+Further refills, water changes, state updates, and disable/re-enable do not repeat
+events while the threshold remains satisfied. Brew consumption and manual changes
+re-arm each threshold independently. Particle refills use the same path. If one
+refill crosses both thresholds, OnEnoughBeans fires before OnBeansFull. These
+events describe bean supply only; water and cup checks still gate brewing.
+`HasBeans` and `IsBeanHopperFull` expose current states. Inspector changes to bean
+amount, recipe size, or capacity are also checked in LateUpdate while enabled.
+Zero-capacity hoppers are not reported full.
+
+Water uses the same independent threshold behavior, including initial supplies,
+brew consumption, Inspector monitoring, and non-repeating readiness/full events.
+`HasWater` and `IsWaterTankFull` expose the current states. See
+[Water Refill sample](Samples~/WaterRefill/README.md) for a stationary particle
+stream, `FP_WaterFillRegion`, and `FP_WaterParticleTrigger`. Each captured particle
+adds configurable milliliters through `AddWaterMl`; no tipping component is needed.
 
 ### Cup detection
 

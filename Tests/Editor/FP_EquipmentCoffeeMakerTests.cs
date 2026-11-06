@@ -226,5 +226,204 @@ namespace FuzzPhyte.Tools.Tests
             Assert.That(_maker.Status.TimerRemainingSec, Is.Zero);
             Assert.That(_maker.BeansGrams, Is.EqualTo(45f));
         }
+
+        [Test]
+        public void BeanEventsFireOnceAtExactThresholdsAndIgnoreFurtherRefills()
+        {
+            int enough = 0, full = 0;
+            _maker.OnEnoughBeans.AddListener(m => enough++);
+            _maker.OnBeansFull.AddListener(m => full++);
+            _maker.SetBeansGrams(14f);
+            Assert.That(enough, Is.Zero);
+            _maker.AddBeansGrams(1f);
+            _maker.AddBeansGrams(1f);
+            _maker.SetWaterMl(1000f);
+            Assert.That(enough, Is.EqualTo(1));
+            Assert.That(full, Is.Zero);
+            _maker.SetBeansGrams(250f);
+            _maker.AddBeansGrams(1000f);
+            _maker.SetBeansGrams(250f);
+            _maker.Execute(new EquipmentCommand { Type = EquipmentCommandType.SetPowerOn });
+            Assert.That(enough, Is.EqualTo(1));
+            Assert.That(full, Is.EqualTo(1));
+            Assert.That(_maker.IsBeanHopperFull, Is.True);
+        }
+
+        [Test]
+        public void WaterEventsFireAtRecipeAndCapacityAndRearmAfterConsumption()
+        {
+            int enough = 0, full = 0;
+            _maker.OnEnoughWater.AddListener(m => enough++);
+            _maker.OnWaterFull.AddListener(m => full++);
+            _maker.SetBeansGrams(60f);
+            _maker.SetWaterMl(249f);
+            Assert.That(enough, Is.Zero);
+            _maker.AddWaterMl(1f);
+            _maker.AddWaterMl(1f);
+            Assert.That(enough, Is.EqualTo(1));
+            _maker.SetWaterMl(1000f);
+            _maker.AddWaterMl(1000f);
+            _maker.SetWaterMl(1000f);
+            Assert.That(full, Is.EqualTo(1));
+            Assert.That(_maker.IsWaterTankFull, Is.True);
+            _maker.StartBrewing();
+            _maker.CancelBrewing();
+            _maker.AddWaterMl(250f);
+            Assert.That(full, Is.EqualTo(2));
+            Assert.That(enough, Is.EqualTo(1));
+            _maker.SetWaterMl(250f);
+            _maker.StartBrewing();
+            _maker.CancelBrewing();
+            _maker.AddWaterMl(250f);
+            Assert.That(enough, Is.EqualTo(2));
+            Assert.That(full, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void InitialWaterSupplyReportsThresholdsOnceWithoutEnableDuplicates()
+        {
+            int enough = 0, full = 0;
+            _maker.OnEnoughWater.AddListener(m => enough++);
+            _maker.OnWaterFull.AddListener(m => full++);
+            Set(_maker, "waterMl", 1000f);
+            typeof(FP_EquipmentCoffeeMaker).GetMethod("Awake", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(_maker, null);
+            _maker.enabled = false;
+            _maker.enabled = true;
+            _maker.SetBeansGrams(30f);
+            Assert.That(enough, Is.EqualTo(1));
+            Assert.That(full, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void WaterCallbackCanDrainAndRefillWithoutRepeatingStaleFullEvent()
+        {
+            int enough = 0, full = 0;
+            _maker.OnEnoughWater.AddListener(m =>
+            {
+                enough++;
+                if (enough != 1) return;
+                m.SetWaterMl(0f);
+                m.SetWaterMl(1000f);
+            });
+            _maker.OnWaterFull.AddListener(m => full++);
+            _maker.SetWaterMl(1000f);
+            Assert.That(enough, Is.EqualTo(2));
+            Assert.That(full, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void InspectorWaterRecipeAndCapacityChangesAreMonitored()
+        {
+            int enough = 0, full = 0;
+            _maker.OnEnoughWater.AddListener(m => enough++);
+            _maker.OnWaterFull.AddListener(m => full++);
+            _maker.SetWaterMl(100f);
+            Set(_maker, "waterPerBrewMl", 100f);
+            Set(_maker, "waterCapacityMl", 100f);
+            var lateUpdate = typeof(FP_EquipmentCoffeeMaker).GetMethod("LateUpdate", BindingFlags.Instance | BindingFlags.NonPublic);
+            lateUpdate.Invoke(_maker, null);
+            lateUpdate.Invoke(_maker, null);
+            Assert.That(enough, Is.EqualTo(1));
+            Assert.That(full, Is.EqualTo(1));
+            Set(_maker, "waterCapacityMl", 0f);
+            _maker.SetWaterMl(0f);
+            Assert.That(_maker.IsWaterTankFull, Is.False);
+            Assert.That(full, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void CupPresentEventFiresOncePerArrivalAndRearmsAfterRemoval()
+        {
+            Set(_maker, "requireCup", true);
+            int present = 0;
+            _maker.OnCupPresent.AddListener(m => present++);
+            _maker.SetCupPresent(false);
+            _maker.SetCupPresent(true);
+            _maker.SetCupPresent(true);
+            _maker.SetWaterMl(1000f);
+            Assert.That(present, Is.EqualTo(1));
+            _maker.SetCupPresent(false);
+            _maker.SetCupPresent(true);
+            Assert.That(present, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void BrewingAndManualDepletionRearmBeanEventsIndependently()
+        {
+            int enough = 0, full = 0;
+            _maker.OnEnoughBeans.AddListener(m => enough++);
+            _maker.OnBeansFull.AddListener(m => full++);
+            Fill(); // Enough for several drinks.
+            _maker.SetBeansGrams(250f);
+            _maker.StartBrewing(); // Drops below capacity, still enough for a drink.
+            _maker.CancelBrewing();
+            _maker.AddBeansGrams(15f);
+            Assert.That(enough, Is.EqualTo(1));
+            Assert.That(full, Is.EqualTo(2));
+            _maker.SetBeansGrams(15f);
+            _maker.StartBrewing(); // Consume last recipe and re-arm enough-beans event.
+            _maker.CancelBrewing();
+            _maker.AddBeansGrams(15f);
+            Assert.That(enough, Is.EqualTo(2));
+            Assert.That(full, Is.EqualTo(2));
+            _maker.SetBeansGrams(0f);
+            _maker.SetBeansGrams(1000f); // Clamp and cross both in one refill.
+            Assert.That(enough, Is.EqualTo(3));
+            Assert.That(full, Is.EqualTo(3));
+        }
+
+        [Test]
+        public void InitialBeanSupplyReportsReadinessOnceAndEnableDoesNotRepeatIt()
+        {
+            int enough = 0, full = 0;
+            _maker.OnEnoughBeans.AddListener(m => enough++);
+            _maker.OnBeansFull.AddListener(m => full++);
+            Set(_maker, "beansGrams", 250f);
+            typeof(FP_EquipmentCoffeeMaker).GetMethod("Awake", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(_maker, null);
+            Assert.That(enough, Is.EqualTo(1));
+            Assert.That(full, Is.EqualTo(1));
+            _maker.enabled = false;
+            _maker.enabled = true;
+            _maker.SetWaterMl(250f);
+            Assert.That(enough, Is.EqualTo(1));
+            Assert.That(full, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void BeanThresholdCallbackCanDrainAndRefillWithoutStaleFullEvent()
+        {
+            int enough = 0, full = 0;
+            _maker.OnEnoughBeans.AddListener(m =>
+            {
+                enough++;
+                if (enough != 1) return;
+                m.SetBeansGrams(0f);
+                m.SetBeansGrams(250f);
+            });
+            _maker.OnBeansFull.AddListener(m => full++);
+            _maker.SetBeansGrams(250f);
+            Assert.That(enough, Is.EqualTo(2));
+            Assert.That(full, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void RecipeAndCapacityInspectorChangesAreMonitoredAndZeroCapacityIsNotFull()
+        {
+            int enough = 0, full = 0;
+            _maker.OnEnoughBeans.AddListener(m => enough++);
+            _maker.OnBeansFull.AddListener(m => full++);
+            _maker.SetBeansGrams(10f);
+            Set(_maker, "beansPerBrewGrams", 10f);
+            Set(_maker, "beanCapacityGrams", 10f);
+            var lateUpdate = typeof(FP_EquipmentCoffeeMaker).GetMethod("LateUpdate", BindingFlags.Instance | BindingFlags.NonPublic);
+            lateUpdate.Invoke(_maker, null);
+            lateUpdate.Invoke(_maker, null);
+            Assert.That(enough, Is.EqualTo(1));
+            Assert.That(full, Is.EqualTo(1));
+            Set(_maker, "beanCapacityGrams", 0f);
+            _maker.SetBeansGrams(0f);
+            Assert.That(_maker.IsBeanHopperFull, Is.False);
+            Assert.That(full, Is.EqualTo(1));
+        }
     }
 }

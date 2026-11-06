@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### [0.6.4] Added
 
+- Coffee maker `OnEnoughWater` / `OnWaterFull` threshold events with initial-supply
+  notification and independent re-arming, particle-based water inlet receivers,
+  and a documented stationary Water Refill sample.
+- Coffee maker `OnEnoughBeans` and `OnBeansFull` threshold events, initial-supply
+  notification, independent re-arming after consumption/depletion, and regression tests.
+- Coffee maker `OnCupPresent` arrival event, re-armed after removal, for both the
+  configured cup region and existing manual detectors.
 - `FP_EquipmentToaster` with a normalized toast setting, timed heat transfer to
   contained energy-reactive items, entry/exit, start/toasting/progress/finish/cancel
   events, empty-slot rejection, and break/repair commands.

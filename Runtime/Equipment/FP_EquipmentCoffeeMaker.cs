@@ -35,11 +35,19 @@ namespace FuzzPhyte.Tools
         private bool _started;
         private bool _poweringOff;
         private uint _cycleVersion;
+        private bool _hadEnoughBeans;
+        private bool _wasBeanHopperFull;
+        private uint _beanThresholdVersion;
+        private bool _hadEnoughWater;
+        private bool _wasWaterTankFull;
+        private uint _waterThresholdVersion;
         public bool IsBrewing => _status.Power == EquipmentPowerState.OnWithTimer;
         public float BeansGrams => beansGrams;
         public float WaterMl => waterMl;
         public bool HasBeans => beansGrams >= beansPerBrewGrams;
+        public bool IsBeanHopperFull => beanCapacityGrams > 0f && beansGrams >= beanCapacityGrams;
         public bool HasWater => waterMl >= waterPerBrewMl;
+        public bool IsWaterTankFull => waterCapacityMl > 0f && waterMl >= waterCapacityMl;
         public bool IsCupPresent => cupPresent;
         public float BrewProgress01 => _status.NormalizedLevel;
         public float LastBrewVolumeMl { get; private set; }
@@ -53,7 +61,12 @@ namespace FuzzPhyte.Tools
         public CoffeeMakerEvent OnNoBeans = new CoffeeMakerEvent();
         public CoffeeMakerEvent OnNoWater = new CoffeeMakerEvent();
         public CoffeeMakerEvent OnNoCup = new CoffeeMakerEvent();
+        public CoffeeMakerEvent OnCupPresent = new CoffeeMakerEvent();
         public CoffeeMakerEvent OnSuppliesChanged = new CoffeeMakerEvent();
+        public CoffeeMakerEvent OnEnoughBeans = new CoffeeMakerEvent();
+        public CoffeeMakerEvent OnBeansFull = new CoffeeMakerEvent();
+        public CoffeeMakerEvent OnEnoughWater = new CoffeeMakerEvent();
+        public CoffeeMakerEvent OnWaterFull = new CoffeeMakerEvent();
         public CoffeeMakerEvent OnBroken = new CoffeeMakerEvent();
         public CoffeeMakerEvent OnRepaired = new CoffeeMakerEvent();
         public CoffeeMakerEvent OnStateChanged = new CoffeeMakerEvent();
@@ -153,12 +166,59 @@ namespace FuzzPhyte.Tools
             else if (_hasUsedCupRegion) UpdateCupPresence(false);
         }
 
-        private void LateUpdate() => RefreshCupPresence();
+        private void LateUpdate()
+        {
+            RefreshCupPresence();
+            if (isActiveAndEnabled)
+            {
+                CheckBeanThresholds();
+                CheckWaterThresholds();
+            }
+        }
+
+        private void CheckBeanThresholds()
+        {
+            bool enough = HasBeans;
+            bool full = IsBeanHopperFull;
+            if (enough == _hadEnoughBeans && full == _wasBeanHopperFull) return;
+            bool becameEnough = enough && !_hadEnoughBeans;
+            bool becameFull = full && !_wasBeanHopperFull;
+            // Commit both latches before callbacks, which may consume or refill beans.
+            _hadEnoughBeans = enough;
+            _wasBeanHopperFull = full;
+            uint version = ++_beanThresholdVersion;
+            if (becameEnough) OnEnoughBeans?.Invoke(this);
+            if (becameFull && version == _beanThresholdVersion) OnBeansFull?.Invoke(this);
+        }
+
+        protected override void InitializeStatus()
+        {
+            _hadEnoughBeans = false;
+            _wasBeanHopperFull = false;
+            _hadEnoughWater = false;
+            _wasWaterTankFull = false;
+            base.InitializeStatus();
+        }
+
+        private void CheckWaterThresholds()
+        {
+            bool enough = HasWater;
+            bool full = IsWaterTankFull;
+            if (enough == _hadEnoughWater && full == _wasWaterTankFull) return;
+            bool becameEnough = enough && !_hadEnoughWater;
+            bool becameFull = full && !_wasWaterTankFull;
+            _hadEnoughWater = enough;
+            _wasWaterTankFull = full;
+            uint version = ++_waterThresholdVersion;
+            if (becameEnough) OnEnoughWater?.Invoke(this);
+            if (becameFull && version == _waterThresholdVersion) OnWaterFull?.Invoke(this);
+        }
 
         private void UpdateCupPresence(bool present)
         {
             if (cupPresent == present) return;
             cupPresent = present;
+            if (present) OnCupPresent?.Invoke(this);
             if (requireCup && !present && IsBrewing)
             {
                 CancelBrewing();
@@ -236,6 +296,8 @@ namespace FuzzPhyte.Tools
             _status.Fill = waterMl > 0f
                 ? (_containedItems.Count > 0 ? EquipmentFillState.MixedContents : EquipmentFillState.ContainsLiquid)
                 : (_containedItems.Count > 0 ? EquipmentFillState.ContainsItem : EquipmentFillState.Empty);
+            CheckBeanThresholds();
+            CheckWaterThresholds();
             base.Emit();
             foreach (var item in _containedItems.ToArray()) item.OnEquipmentStateChanged(this, _status);
             OnStateChanged?.Invoke(this);

@@ -31,6 +31,11 @@
         "displayName": "Coffee Bean Pour",
         "description": "Includes a way to pour beans out",
         "path": "Samples~/BeanPour"
+      },
+      {
+        "displayName": "Coffee Water Refill",
+        "description": "Stationary water particles refill a coffee maker reservoir",
+        "path": "Samples~/WaterRefill"
       }
     ],
     "keywords": [
