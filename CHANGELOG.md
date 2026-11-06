@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `FP_EquipmentCoffeeMaker` with timed brewing, beans/water quantities and refills,
+  optional cup gating, start/brewing/progress/finish/cancel/shortage/condition events,
+  existing command support, and Edit Mode/Play Mode tests.
 - `FP_EquipmentScale`, `FP_WeightedItem`, and `FP_ScaleContainmentVolume` for
   event-driven multi-item weight totals, compound colliders, overlapping volumes,
   and contact cleanup. Uses existing equipment commands without a tick dependency.

@@ -130,6 +130,61 @@ lifecycle cleanup, validation, events, and power/condition behavior. A Play Mode
 integration test exercises actual 3D trigger contacts and display updates. UI
 placement and device acceptance must also be checked in the consuming project.
 
+## Coffee Maker
+
+Add `FP_EquipmentCoffeeMaker` to your coffee maker model. It follows the microwave
+and sink's `FP_EquipmentTickableBase` pattern and uses `FP_TickSystem` to advance
+brewing. Initialize the tick system before the maker's `Start`, or disable automatic
+registration and call `Tick(dt)` from your own driver. No separate `FP_Timer` is
+required. Disabling cancels brewing, powers off, and unregisters; re-enabling
+registers again without restarting the cancelled drink.
+
+Configure Brew Duration Seconds, Beans Per Brew Grams, and Water Per Brew Ml
+(defaults: 30 seconds, 15 g, 250 ml). Set capacities and starting supplies in the
+Inspector. Supplies start empty. Use `AddBeansGrams(float)` / `AddWaterMl(float)`
+for refilling, or `SetBeansGrams(float)` / `SetWaterMl(float)` for absolute amounts.
+Amounts clamp to capacity; invalid/non-finite absolute amounts become zero and
+invalid/negative additions are ignored. `HasBeans` and `HasWater` mean enough
+for the configured recipe, not merely nonempty.
+
+Wire the model's brew button to `StartBrewing()` and its stop button to
+`CancelBrewing()`. `StartBrewingForSeconds(float)` overrides only cycle duration.
+Starting automatically powers on; powering on alone leaves the maker idle.
+Repeated starts while brewing do nothing. The entire recipe is deducted once at
+acceptance; cancellation does not refund it. Refilling during brewing changes the
+reservoir for the next drink. This is a timed interaction, not fluid/temperature
+simulation or automatic transfer into a cup.
+
+All events below are Inspector UnityEvents passing the coffee maker:
+
+| Event | Suggested model/audio binding |
+| --- | --- |
+| `OnStarted` | Accepted brew: button feedback or initial mechanism animation. |
+| `OnBrewing` | Once per cycle after Started: start pump audio, coffee stream, steam, brewing light. |
+| `OnBrewProgress` | Each advancing tick: read `BrewProgress01` or `Status.TimerRemainingSec` for a display/animation. |
+| `OnFinished` | Successful end: stop effects and play ready feedback; `LastBrewVolumeMl` is available. |
+| `OnCancelled` | Interrupted end: stop brewing effects. Also fires on power-off, break, disable, or required-cup removal during brewing. |
+| `OnNoBeans` / `OnNoWater` | Start rejected because the recipe needs more beans/water; both fire if both are insufficient. |
+| `OnNoCup` | Required cup missing on start, or removed during brewing. |
+| `OnSuppliesChanged` | Refill or recipe consumption: update reservoir/hopper indicators. |
+| `OnBroken` / `OnRepaired` | Condition feedback; repair leaves the machine off. |
+| `OnStateChanged` | General equipment display refresh and inherited state updates. |
+
+For the cup under the spout, optionally enable Require Cup and call
+`SetCupPresent(true/false)` from your cup/socket detector. Cup presence is explicit;
+the generic item containment volume does not identify cups. Without Require Cup,
+the maker can brew freely. If enabled, removing the cup cancels immediately.
+
+Existing commands map as follows: `InterfaceActions` starts the default recipe;
+`StartTimerSeconds` uses `FValue` as the duration; `CancelTimer` cancels;
+power/toggle/break/repair commands manage the normal equipment states. A broken or
+disabled maker cannot start. No new command enums or package dependencies are added.
+`EmitPowerUnit` stays zero, so contained energy-reactive items are not heated.
+The existing contained-item callbacks remain available. Edit Mode tests cover
+recipes, shortages, events, commands, cancellation and callback re-entry; a Play
+Mode test covers automatic ticking and disable/re-enable registration. Wire and
+check the actual scene's cup detector, animations, particles, and audio separately.
+
 ## FP_Tool Dependencies
 
 Please see the [package.json](./package.json) file for more information.

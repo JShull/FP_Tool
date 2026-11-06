@@ -1,6 +1,6 @@
 {
     "name": "com.fuzzphyte.tools.tests.runtime",
     "rootNamespace": "FuzzPhyte.Tools.Tests",
-    "references": ["com.fuzzphyte.tools", "Unity.TextMeshPro", "UnityEngine.UI"],
+    "references": ["com.fuzzphyte.tools", "com.fuzzphyte.utility", "Unity.TextMeshPro", "UnityEngine.UI"],
     "optionalUnityReferences": ["TestAssemblies"]
 }
