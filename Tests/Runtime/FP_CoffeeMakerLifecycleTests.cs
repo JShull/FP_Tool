@@ -57,5 +57,33 @@ namespace FuzzPhyte.Tools.Tests
             Assert.That(finished, Is.EqualTo(2), "Re-enabled coffee makers must resume automatic ticking.");
             Assert.That(maker.LastBrewVolumeMl, Is.EqualTo(250f));
         }
+
+        [UnityTest]
+        public IEnumerator LastAllocatedCupFinishesBeforeReportingSupplyShortages()
+        {
+            Assert.That(FP_TickSystem.CCTick == null, Is.True, "This test requires an isolated test scene.");
+            _tickObject = new GameObject("Coffee maker shortage test tick system");
+            _tickObject.AddComponent<FP_TickSystem>();
+            _makerObject = new GameObject("Coffee maker last cup");
+            var maker = _makerObject.AddComponent<FP_EquipmentCoffeeMaker>();
+            maker.SetBeansGrams(15f);
+            maker.SetWaterMl(250f);
+            int beans = 0, water = 0, finished = 0;
+            maker.OnNoBeans.AddListener(m => { beans++; Assert.That(m.IsBrewing, Is.False); m.CancelBrewing(); });
+            maker.OnNoWater.AddListener(m => { water++; Assert.That(m.IsBrewing, Is.False); m.CancelBrewing(); });
+            maker.OnFinished.AddListener(m => finished++);
+            yield return null;
+            maker.StartBrewingForSeconds(0.04f);
+            Assert.That(maker.IsBrewing, Is.True);
+            Assert.That(beans + water, Is.Zero);
+            float deadline = Time.realtimeSinceStartup + 2f;
+            while (maker.IsBrewing && Time.realtimeSinceStartup < deadline) yield return null;
+            Assert.That(finished, Is.EqualTo(1));
+            Assert.That(beans, Is.EqualTo(1));
+            Assert.That(water, Is.EqualTo(1));
+            Assert.That(maker.LastBrewVolumeMl, Is.EqualTo(250f));
+            yield return null;
+            Assert.That(beans + water, Is.EqualTo(2));
+        }
     }
 }

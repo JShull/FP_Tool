@@ -164,7 +164,7 @@ All events below are Inspector UnityEvents passing the coffee maker:
 | `OnBrewProgress` | Each advancing tick: read `BrewProgress01` or `Status.TimerRemainingSec` for a display/animation. |
 | `OnFinished` | Successful end: stop effects and play ready feedback; `LastBrewVolumeMl` is available. |
 | `OnCancelled` | Interrupted end: stop brewing effects. Also fires on power-off, break, disable, or required-cup removal during brewing. |
-| `OnNoBeans` / `OnNoWater` | Start rejected because the recipe needs more beans/water; both fire if both are insufficient. |
+| `OnNoBeans` / `OnNoWater` | Start rejected because the recipe needs more supplies; also once when an available supply falls below one recipe. During brewing, depletion notifications wait until finish/cancel and are cleared by refilling. |
 | `OnNoCup` | Required cup missing on start, or removed during brewing. |
 | `OnCupPresent` | Once when cup presence changes from absent to present; re-arms on removal. A cup already in the assigned region is reported on the first required-cup check. |
 | `OnSuppliesChanged` | Refill or recipe consumption: update reservoir/hopper indicators. |
@@ -185,6 +185,16 @@ events describe bean supply only; water and cup checks still gate brewing.
 `HasBeans` and `IsBeanHopperFull` expose current states. Inspector changes to bean
 amount, recipe size, or capacity are also checked in LateUpdate while enabled.
 Zero-capacity hoppers are not reported full.
+
+When brewing consumes the last recipe's beans or water, the existing OnNoBeans /
+OnNoWater events now report the resulting shortage at cycle completion (before
+OnFinished), without requiring another start attempt. Cancellation also publishes
+any remaining shortage. This does not interrupt an accepted drink: ingredients
+were already allocated when it started. Refilling enough during brewing clears
+the corresponding pending warning. Outside brewing, a downward crossing reports
+immediately (Inspector edits are sampled in LateUpdate). State refreshes do not
+repeat shortage notifications; refilling above the recipe amount re-arms them.
+An explicit rejected start still reports its missing supplies on every attempt.
 
 Water uses the same independent threshold behavior, including initial supplies,
 brew consumption, Inspector monitoring, and non-repeating readiness/full events.

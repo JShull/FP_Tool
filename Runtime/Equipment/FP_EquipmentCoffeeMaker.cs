@@ -41,6 +41,8 @@ namespace FuzzPhyte.Tools
         private bool _hadEnoughWater;
         private bool _wasWaterTankFull;
         private uint _waterThresholdVersion;
+        private bool _pendingNoBeans;
+        private bool _pendingNoWater;
         public bool IsBrewing => _status.Power == EquipmentPowerState.OnWithTimer;
         public float BeansGrams => beansGrams;
         public float WaterMl => waterMl;
@@ -173,6 +175,7 @@ namespace FuzzPhyte.Tools
             {
                 CheckBeanThresholds();
                 CheckWaterThresholds();
+                PublishPendingShortages();
             }
         }
 
@@ -183,6 +186,8 @@ namespace FuzzPhyte.Tools
             if (enough == _hadEnoughBeans && full == _wasBeanHopperFull) return;
             bool becameEnough = enough && !_hadEnoughBeans;
             bool becameFull = full && !_wasBeanHopperFull;
+            if (enough) _pendingNoBeans = false;
+            else if (_hadEnoughBeans) _pendingNoBeans = true;
             // Commit both latches before callbacks, which may consume or refill beans.
             _hadEnoughBeans = enough;
             _wasBeanHopperFull = full;
@@ -197,6 +202,8 @@ namespace FuzzPhyte.Tools
             _wasBeanHopperFull = false;
             _hadEnoughWater = false;
             _wasWaterTankFull = false;
+            _pendingNoBeans = false;
+            _pendingNoWater = false;
             base.InitializeStatus();
         }
 
@@ -207,11 +214,25 @@ namespace FuzzPhyte.Tools
             if (enough == _hadEnoughWater && full == _wasWaterTankFull) return;
             bool becameEnough = enough && !_hadEnoughWater;
             bool becameFull = full && !_wasWaterTankFull;
+            if (enough) _pendingNoWater = false;
+            else if (_hadEnoughWater) _pendingNoWater = true;
             _hadEnoughWater = enough;
             _wasWaterTankFull = full;
             uint version = ++_waterThresholdVersion;
             if (becameEnough) OnEnoughWater?.Invoke(this);
             if (becameFull && version == _waterThresholdVersion) OnWaterFull?.Invoke(this);
+        }
+
+        private void PublishPendingShortages()
+        {
+            if (IsBrewing) return;
+            bool noBeans = _pendingNoBeans && !HasBeans;
+            bool noWater = _pendingNoWater && !HasWater;
+            // Clear before callbacks: listeners may refill, start a cycle, or emit state again.
+            _pendingNoBeans = false;
+            _pendingNoWater = false;
+            if (noBeans) OnNoBeans?.Invoke(this);
+            if (noWater && !IsBrewing && !HasWater) OnNoWater?.Invoke(this);
         }
 
         private void UpdateCupPresence(bool present)
@@ -298,6 +319,7 @@ namespace FuzzPhyte.Tools
                 : (_containedItems.Count > 0 ? EquipmentFillState.ContainsItem : EquipmentFillState.Empty);
             CheckBeanThresholds();
             CheckWaterThresholds();
+            PublishPendingShortages();
             base.Emit();
             foreach (var item in _containedItems.ToArray()) item.OnEquipmentStateChanged(this, _status);
             OnStateChanged?.Invoke(this);

@@ -25,6 +25,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### [0.6.4] Changed
 
+- Coffee maker supply shortages now publish existing `OnNoBeans` / `OnNoWater`
+  events after brew completion/cancellation when the next recipe is unavailable,
+  without another start attempt. Mid-brew refills clear pending notifications;
+  idle depletion reports once when a threshold is crossed downward.
 - Package version updated to `0.6.4`.
 - `FP_EquipmentTickableBase.Tick` is virtual so timed equipment can transfer heat
   for the final partial tick before completing. Existing base behavior is preserved.

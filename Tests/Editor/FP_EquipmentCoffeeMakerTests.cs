@@ -280,6 +280,88 @@ namespace FuzzPhyte.Tools.Tests
         }
 
         [Test]
+        public void LastRecipeReportsBothShortagesAtCompletionWithoutAnotherStartAttempt()
+        {
+            _maker.SetBeansGrams(15f);
+            _maker.SetWaterMl(250f);
+            int beans = 0, water = 0, finished = 0;
+            _maker.OnNoBeans.AddListener(m => { Assert.That(m.IsBrewing, Is.False); beans++; });
+            _maker.OnNoWater.AddListener(m => { Assert.That(m.IsBrewing, Is.False); water++; });
+            _maker.OnFinished.AddListener(m => finished++);
+            _maker.StartBrewingForSeconds(1f);
+            Assert.That(_maker.HasBeans || _maker.HasWater, Is.False);
+            Assert.That(beans + water, Is.Zero, "The accepted drink must not be interrupted by its supply deduction.");
+            _maker.Tick(0.5f);
+            Assert.That(beans + water, Is.Zero);
+            _maker.Tick(0.5f);
+            Assert.That(finished, Is.EqualTo(1));
+            Assert.That(beans, Is.EqualTo(1));
+            Assert.That(water, Is.EqualTo(1));
+            _maker.Tick(1f);
+            _maker.SetCupPresent(true);
+            _maker.Execute(new EquipmentCommand { Type = EquipmentCommandType.SetPowerOff });
+            Assert.That(beans, Is.EqualTo(1));
+            Assert.That(water, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void CompletionReportsOnlyDepletedSupplyAndRearmsAfterRefill()
+        {
+            _maker.SetBeansGrams(60f);
+            _maker.SetWaterMl(250f);
+            int beans = 0, water = 0;
+            _maker.OnNoBeans.AddListener(m => beans++);
+            _maker.OnNoWater.AddListener(m => water++);
+            _maker.StartBrewingForSeconds(1f);
+            _maker.Tick(1f);
+            Assert.That(beans, Is.Zero);
+            Assert.That(water, Is.EqualTo(1));
+            _maker.AddWaterMl(250f);
+            _maker.StartBrewingForSeconds(1f);
+            _maker.Tick(1f);
+            Assert.That(beans, Is.Zero);
+            Assert.That(water, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void RefillingDuringBrewClearsPendingShortagesAndCancelPublishesRemainingOnes()
+        {
+            _maker.SetBeansGrams(15f);
+            _maker.SetWaterMl(250f);
+            int beans = 0, water = 0;
+            _maker.OnNoBeans.AddListener(m => beans++);
+            _maker.OnNoWater.AddListener(m => water++);
+            _maker.StartBrewingForSeconds(1f);
+            _maker.AddBeansGrams(15f);
+            _maker.AddWaterMl(250f);
+            _maker.Tick(1f);
+            Assert.That(beans + water, Is.Zero);
+            _maker.StartBrewingForSeconds(1f);
+            _maker.AddWaterMl(250f);
+            _maker.CancelBrewing();
+            Assert.That(beans, Is.EqualTo(1));
+            Assert.That(water, Is.Zero);
+        }
+
+        [Test]
+        public void IdleDepletionNotifiesOnceAndNoBeansListenerCanResolveWaterShortage()
+        {
+            Fill();
+            int beans = 0, water = 0;
+            _maker.OnNoBeans.AddListener(m => { beans++; m.AddWaterMl(250f); });
+            _maker.OnNoWater.AddListener(m => water++);
+            // Change both through serialized state as an Inspector/external-state update.
+            Set(_maker, "beansGrams", 0f);
+            Set(_maker, "waterMl", 0f);
+            typeof(FP_EquipmentCoffeeMaker).GetMethod("LateUpdate", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(_maker, null);
+            Assert.That(beans, Is.EqualTo(1));
+            Assert.That(water, Is.Zero);
+            _maker.SetWaterMl(0f);
+            _maker.SetWaterMl(0f);
+            Assert.That(water, Is.EqualTo(1));
+        }
+
+        [Test]
         public void InitialWaterSupplyReportsThresholdsOnceWithoutEnableDuplicates()
         {
             int enough = 0, full = 0;
