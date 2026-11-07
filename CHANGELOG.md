@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### [0.6.4] Added
 
+- Coffee maker `OnCupRemoved` departure event for idle and brewing visual feedback,
+  alongside the existing cup-arrival and missing-cup events.
 - Coffee maker `OnEnoughWater` / `OnWaterFull` threshold events with initial-supply
   notification and independent re-arming, particle-based water inlet receivers,
   and a documented stationary Water Refill sample.

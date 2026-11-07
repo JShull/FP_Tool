@@ -167,6 +167,7 @@ All events below are Inspector UnityEvents passing the coffee maker:
 | `OnNoBeans` / `OnNoWater` | Start rejected because the recipe needs more supplies; also once when an available supply falls below one recipe. During brewing, depletion notifications wait until finish/cancel and are cleared by refilling. |
 | `OnNoCup` | Required cup missing on start, or removed during brewing. |
 | `OnCupPresent` | Once when cup presence changes from absent to present; re-arms on removal. A cup already in the assigned region is reported on the first required-cup check. |
+| `OnCupRemoved` | Once when a previously present cup becomes absent, whether idle or brewing; use to update player visuals. Starting empty does not count as a departure. |
 | `OnSuppliesChanged` | Refill or recipe consumption: update reservoir/hopper indicators. |
 | `OnEnoughBeans` | Once when Beans Grams reaches/exceeds Beans Per Brew Grams; re-arms after dropping below the recipe amount. |
 | `OnBeansFull` | Once when Beans Grams reaches the positive Bean Capacity Grams; re-arms after dropping below capacity. |

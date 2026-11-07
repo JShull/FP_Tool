@@ -64,6 +64,7 @@ namespace FuzzPhyte.Tools
         public CoffeeMakerEvent OnNoWater = new CoffeeMakerEvent();
         public CoffeeMakerEvent OnNoCup = new CoffeeMakerEvent();
         public CoffeeMakerEvent OnCupPresent = new CoffeeMakerEvent();
+        public CoffeeMakerEvent OnCupRemoved = new CoffeeMakerEvent();
         public CoffeeMakerEvent OnSuppliesChanged = new CoffeeMakerEvent();
         public CoffeeMakerEvent OnEnoughBeans = new CoffeeMakerEvent();
         public CoffeeMakerEvent OnBeansFull = new CoffeeMakerEvent();
@@ -245,6 +246,7 @@ namespace FuzzPhyte.Tools
                 CancelBrewing();
                 OnNoCup?.Invoke(this);
             }
+            if (!present) OnCupRemoved?.Invoke(this);
             Emit();
         }
 

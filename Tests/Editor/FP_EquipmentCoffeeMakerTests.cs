@@ -430,6 +430,31 @@ namespace FuzzPhyte.Tools.Tests
         }
 
         [Test]
+        public void CupRemovedReportsEachDepartureOnceWhileIdleAndBrewing()
+        {
+            Set(_maker, "requireCup", true);
+            int removed = 0, missing = 0, cancelled = 0;
+            _maker.OnCupRemoved.AddListener(m => { Assert.That(m.IsCupPresent, Is.False); removed++; });
+            _maker.OnNoCup.AddListener(m => missing++);
+            _maker.OnCancelled.AddListener(m => cancelled++);
+            _maker.SetCupPresent(false);
+            Assert.That(removed, Is.Zero, "Starting empty is not a departure.");
+            _maker.SetCupPresent(true);
+            _maker.SetCupPresent(false);
+            _maker.SetCupPresent(false);
+            Assert.That(removed, Is.EqualTo(1));
+            Assert.That(missing + cancelled, Is.Zero, "Idle departure does not imply a rejected brew.");
+            Fill();
+            _maker.SetCupPresent(true);
+            _maker.StartBrewing();
+            _maker.SetCupPresent(false);
+            Assert.That(removed, Is.EqualTo(2));
+            Assert.That(missing, Is.EqualTo(1));
+            Assert.That(cancelled, Is.EqualTo(1));
+            Assert.That(_maker.IsBrewing, Is.False);
+        }
+
+        [Test]
         public void BrewingAndManualDepletionRearmBeanEventsIndependently()
         {
             int enough = 0, full = 0;

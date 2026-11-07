@@ -44,9 +44,10 @@ namespace FuzzPhyte.Tools.Tests
             Set(maker, "cupRegion", region);
             maker.SetBeansGrams(250f);
             maker.SetWaterMl(1000f);
-            int missing = 0, cancelled = 0;
+            int missing = 0, cancelled = 0, removed = 0;
             maker.OnNoCup.AddListener(m => missing++);
             maker.OnCancelled.AddListener(m => cancelled++);
+            maker.OnCupRemoved.AddListener(m => removed++);
             maker.StartBrewing();
             Assert.That(missing, Is.EqualTo(1));
 
@@ -66,6 +67,18 @@ namespace FuzzPhyte.Tools.Tests
             _scene.GetPhysicsScene().Simulate(0.02f);
             yield return null;
 
+            // Detect an idle departure before the player ever presses brew.
+            cupObject.transform.position = Vector3.right * 5f;
+            Physics.SyncTransforms();
+            _scene.GetPhysicsScene().Simulate(0.02f);
+            yield return null;
+            Assert.That(removed, Is.EqualTo(1));
+            Assert.That(missing, Is.EqualTo(1));
+            Assert.That(maker.IsBrewing, Is.False);
+            cupObject.transform.position = Vector3.zero;
+            Physics.SyncTransforms();
+            _scene.GetPhysicsScene().Simulate(0.02f);
+
             maker.StartBrewing();
             Assert.That(maker.IsBrewing, Is.True);
             first.enabled = false;
@@ -77,6 +90,7 @@ namespace FuzzPhyte.Tools.Tests
             yield return null;
             Assert.That(maker.IsBrewing, Is.False);
             Assert.That(cancelled, Is.EqualTo(1));
+            Assert.That(removed, Is.EqualTo(2));
 
             cupObject.transform.position = Vector3.zero;
             Physics.SyncTransforms();
@@ -87,6 +101,7 @@ namespace FuzzPhyte.Tools.Tests
             yield return null;
             Assert.That(maker.IsBrewing, Is.False);
             Assert.That(cancelled, Is.EqualTo(2));
+            Assert.That(removed, Is.EqualTo(3));
 
             Set(maker, "requireCup", false);
             maker.StartBrewingForSeconds(1f);
@@ -103,6 +118,7 @@ namespace FuzzPhyte.Tools.Tests
             yield return null;
             Assert.That(maker.IsBrewing, Is.False);
             Assert.That(maker.IsCupPresent, Is.False);
+            Assert.That(removed, Is.EqualTo(4));
         }
     }
 }
