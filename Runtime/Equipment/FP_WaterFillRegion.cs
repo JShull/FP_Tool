@@ -11,17 +11,22 @@ namespace FuzzPhyte.Tools
     public class FP_WaterFillRegion : MonoBehaviour
     {
         [SerializeField] private FP_EquipmentCoffeeMaker coffeeMaker;
-        [Tooltip("Assign either Coffee Maker or Kettle, not both.")]
+        [Tooltip("Assign exactly one target: Coffee Maker, Kettle, or Cup.")]
         [SerializeField] private FP_EquipmentKettle kettle;
+        [SerializeField] private FP_CupFill cup;
         public BoxCollider RegionCollider => GetComponent<BoxCollider>();
 
         /// <summary>True means the particle was caught, including when the reservoir is already full.</summary>
-        public bool TryReceiveWater(float milliliters)
+        public bool TryReceiveWater(float milliliters) => TryReceiveWater(milliliters, FP_CupLiquidType.Type3);
+
+        public bool TryReceiveWater(float milliliters, FP_CupLiquidType inputType)
         {
             if (!isActiveAndEnabled ||
                 !RegionCollider.enabled || !RegionCollider.isTrigger || milliliters <= 0f ||
                 float.IsNaN(milliliters) || float.IsInfinity(milliliters)) return false;
-            if (coffeeMaker != null && kettle != null) return false;
+            int targets = (coffeeMaker != null ? 1 : 0) + (kettle != null ? 1 : 0) + (cup != null ? 1 : 0);
+            if (targets != 1) return false;
+            if (cup != null) return cup.TryAddLiquid(inputType, milliliters);
             if (kettle != null && kettle.isActiveAndEnabled) { kettle.AddWaterMl(milliliters); return true; }
             if (coffeeMaker != null && coffeeMaker.isActiveAndEnabled) { coffeeMaker.AddWaterMl(milliliters); return true; }
             return false;
@@ -33,6 +38,7 @@ namespace FuzzPhyte.Tools
             RegionCollider.isTrigger = true;
             coffeeMaker = GetComponentInParent<FP_EquipmentCoffeeMaker>();
             kettle = GetComponentInParent<FP_EquipmentKettle>();
+            cup = GetComponentInParent<FP_CupFill>();
         }
     }
 }

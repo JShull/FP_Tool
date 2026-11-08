@@ -14,6 +14,8 @@ namespace FuzzPhyte.Tools
     {
         [SerializeField, Min(0.0001f)] private float millilitersPerParticle = 5f;
         [SerializeField] private FP_WaterFillRegion[] fillRegions = new FP_WaterFillRegion[0];
+        [Tooltip("Cup input channel. Coffee-maker and kettle targets ignore this classification. Keep fixed while particles are alive.")]
+        [SerializeField] private FP_CupLiquidType inputType = FP_CupLiquidType.Type3;
         private ParticleSystem _particles;
         private readonly List<ParticleSystem.Particle> _entered = new List<ParticleSystem.Particle>();
         public int CapturedParticleCount { get; private set; }
@@ -50,7 +52,7 @@ namespace FuzzPhyte.Tools
                 {
                     var collider = colliderData.GetCollider(i, j);
                     var region = collider != null ? collider.GetComponent<FP_WaterFillRegion>() : null;
-                    if (region == null || !region.TryReceiveWater(millilitersPerParticle)) continue;
+                    if (region == null || !region.TryReceiveWater(millilitersPerParticle, inputType)) continue;
                     particle.remainingLifetime = 0f;
                     _entered[i] = particle;
                     CapturedParticleCount++;

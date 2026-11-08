@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### [0.6.4] Added
 
+- Fillable cups with three classified particle inputs, a single shared volume,
+  sticky Mixed state, generic/typed/mixed full and empty events, reset to None,
+  and finite pouring through the existing tip controller.
 - 2026-11-08: Electric kettle with timed heating, retained hot/cold water and timed
   cooling, volume/temperature/condition events, and finite-volume tipped pouring.
 - Kettle target support in the existing water particle refill region, setup notes,
@@ -31,6 +34,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### [0.6.4] Changed
 
+- Water particle triggers classify cup inputs, and the shared fill region can
+  target cups as well as coffee makers/kettles. Existing water targets retain their behavior.
 - `FP_TipParticlePour` accepts an optional supply gate; standalone bean pouring
   remains allowed by default.
 - Coffee maker supply shortages now publish existing `OnNoBeans` / `OnNoWater`

@@ -308,6 +308,90 @@ shared control unit. Physical slot count does not create independent timers.
 The component's own settings control timing and heat; capability flags remain
 descriptive. No new package dependencies are required.
 
+## Fillable cups: three inputs and Mixed
+
+Add `FP_CupFill` to a cup root and configure Capacity Ml (default 250). It adds the
+existing `FP_Cup` marker, so coffee-maker cup-presence regions still recognize it.
+Starting Volume Ml and Liquid Type can be authored in the Inspector. Empty cups
+always use **None**, including immediately before their empty events are invoked.
+
+### Receive particles
+
+1. Put the existing `FP_WaterFillRegion` with one BoxCollider around the cup's
+   opening. Assign **Cup** and leave Coffee Maker / Kettle unassigned. Exactly one
+   receiver target is allowed per region.
+2. On each incoming ParticleSystem GameObject, add the existing
+   `FP_WaterParticleTrigger`, assign the cup's region in Fill Regions, and choose
+   its **Input Type**: Type1 (for example coffee), Type2 (tea), or Type3 (sink water).
+   The source registers the trigger and configures particle callbacks automatically.
+   Multiple sources can share this one cup inlet. Configure Milliliters Per Particle
+   for each source; volume goes into one shared capacity, not three reservoirs.
+3. Keep Input Type fixed while that source has live particles: classification is
+   read when particles enter a receiver. Use a separate particle system for each
+   source type, or stop/clear particles before changing its classification.
+
+The first accepted input selects the cup's type. When another type adds volume,
+the cup becomes **Mixed immediately**, even if only partly full. Further inputs
+keep it mixed. Partial draining also keeps the type/mixed state. **Only completely
+emptying resets it to None**, and the next fill starts a fresh type selection.
+Overflow at capacity is consumed/discarded and does not change type, since no
+new volume entered. A source explicitly marked Mixed can represent an already
+mixed outlet. Coffee and kettle receiver targets ignore cup type classifications,
+so existing water-fill setups keep their behavior. The one-argument
+`TryReceiveWater(amount)` API defaults to Type3 when targeting a cup.
+
+### Events and VFX
+
+All events pass `FP_CupFill`:
+
+| Event | When it fires |
+| --- | --- |
+| `OnFilled` | Overall volume reaches capacity. |
+| `OnEmpty` | Overall volume reaches zero, or initial state is empty. |
+| `OnType1Filled` / `OnType2Filled` / `OnType3Filled` | Capacity reached with that pure type. |
+| `OnType1Empty` / `OnType2Empty` / `OnType3Empty` | The last volume of that pure type is drained. |
+| `OnMixed` | A newly mixed state begins; use to switch to the fourth VFX immediately. |
+| `OnMixedFilled` | Capacity reached while mixed. |
+| `OnMixedEmpty` | A mixed cup is completely drained. |
+| `OnLiquidTypeChanged` | Current classification changes, including reset to None. |
+| `OnFillChanged` | Initial state or volume changes; read VolumeMl and Fill01. |
+| `OnPourStarted` / `OnPourStopped` | Pour feedback from FP_CupPour. |
+| `OnStateChanged` | General cup state refresh. |
+
+For your four effects: use each Type Filled event to activate the appropriate pure
+effect, each Type Empty event to disable it, and OnMixed to disable all three pure
+effects and activate the fourth mixed effect. Use OnMixedEmpty to disable the
+fourth. OnEmpty can additionally reset every effect to a default empty appearance.
+For appearance while a pure cup is still filling, use OnLiquidTypeChanged rather
+than waiting for capacity. `LiquidType` is already None during typed/generic empty
+callbacks; the typed event identifies what was drained.
+
+Events fire once per relevant transition. Further particles while full do not
+repeat Filled. Draining below full and topping up re-arms Filled. A cup that starts
+empty fires only generic OnEmpty, not all typed-empty events. A starting full cup
+fires its matching typed and generic Filled events; a starting mixed cup also
+fires OnMixed. Typed Filled/Empty events precede their generic counterpart.
+Mixing does not fire a pure-type Empty event because the cup has not emptied.
+
+### Pouring and scripting
+
+Add `FP_CupPour` alongside the existing `FP_TipParticlePour`. Assign the cup in
+FP_CupPour, and the origin/upright axis/spout ParticleSystem in FP_TipParticlePour.
+This reuses the same angle thresholds and hysteresis as beans and the kettle.
+Pouring requires liquid, drains Flow Ml Per Second (default 150), and stops at zero.
+Disabling the binder stops emission and retains contents; re-enabling can resume
+if the cup is still tipped and nonempty. Disabling the cup retains its contents.
+
+Use `TryAddLiquid(FP_CupLiquidType, float)` for scripted fills,
+`RemoveLiquidMl(float)` for draining, and `Empty()` to clear all contents and type.
+For custom pouring updates, disable Auto Advance and call `AdvancePour(dt)` on an
+enabled FP_CupPour. No tick system is required. Like kettle pouring, drained flow
+and particle transfer are separate approximations: match emission rate times
+Milliliters Per Particle to flow rate. If pouring into another receiver, configure
+the outlet particle system's input classification explicitly. No temperature or
+per-ingredient proportions are simulated; Mixed is a single state, not separate
+ingredient volumes. Verify inlet placement and VFX bindings in the consuming scene.
+
 ## Electric water kettle
 
 Add `FP_EquipmentKettle` to the kettle root. Configure Water Capacity Ml, starting
