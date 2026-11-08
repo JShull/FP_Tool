@@ -330,12 +330,15 @@ always use **None**, including immediately before their empty events are invoked
    read when particles enter a receiver. Use a separate particle system for each
    source type, or stop/clear particles before changing its classification.
 
-The first accepted input selects the cup's type. When another type adds volume,
+The first accepted input selects the cup's type. When another type is received,
 the cup becomes **Mixed immediately**, even if only partly full. Further inputs
 keep it mixed. Partial draining also keeps the type/mixed state. **Only completely
 emptying resets it to None**, and the next fill starts a fresh type selection.
-Overflow at capacity is consumed/discarded and does not change type, since no
-new volume entered. A source explicitly marked Mixed can represent an already
+At capacity, volume stays capped but incoming liquid of another type still changes
+a pure cup to Mixed. This fires OnMixed and OnMixedFilled once, plus
+OnLiquidTypeChanged. It does not repeat generic OnFilled or OnFillChanged because
+the volume has not changed. Further inputs to a full mixed cup do not repeat events.
+A source explicitly marked Mixed can represent an already
 mixed outlet. Coffee and kettle receiver targets ignore cup type classifications,
 so existing water-fill setups keep their behavior. The one-argument
 `TryReceiveWater(amount)` API defaults to Type3 when targeting a cup.
@@ -351,7 +354,7 @@ All events pass `FP_CupFill`:
 | `OnType1Filled` / `OnType2Filled` / `OnType3Filled` | Capacity reached with that pure type. |
 | `OnType1Empty` / `OnType2Empty` / `OnType3Empty` | The last volume of that pure type is drained. |
 | `OnMixed` | A newly mixed state begins; use to switch to the fourth VFX immediately. |
-| `OnMixedFilled` | Capacity reached while mixed. |
+| `OnMixedFilled` | Capacity reached while mixed, or a full pure cup becomes mixed. |
 | `OnMixedEmpty` | A mixed cup is completely drained. |
 | `OnLiquidTypeChanged` | Current classification changes, including reset to None. |
 | `OnFillChanged` | Initial state or volume changes; read VolumeMl and Fill01. |

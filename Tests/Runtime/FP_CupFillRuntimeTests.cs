@@ -30,12 +30,12 @@ namespace FuzzPhyte.Tools.Tests
         }
 
         [UnityTest]
-        public IEnumerator ThreeParticleInputsFillOneMixedCupAndEmptyResetsNone()
+        public IEnumerator ThreeParticleInputsMixFullCupWithoutIncreasingItsVolume()
         {
             _root = new GameObject("Typed cup particle test");
             _root.SetActive(false);
             var cup = _root.AddComponent<FP_CupFill>();
-            Set(cup, "capacityMl", 30f);
+            Set(cup, "capacityMl", 10f);
             var receiverObject = Child("Cup inlet");
             receiverObject.AddComponent<BoxCollider>().size = Vector3.one;
             var region = receiverObject.AddComponent<FP_WaterFillRegion>();
@@ -82,7 +82,7 @@ namespace FuzzPhyte.Tools.Tests
                 while (relays[i].CapturedParticleCount < 2 && Time.realtimeSinceStartup < deadline) yield return null;
                 sources[i].Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear);
                 Assert.That(relays[i].CapturedParticleCount, Is.EqualTo(2));
-                Assert.That(cup.VolumeMl, Is.EqualTo((i + 1) * 10f));
+                Assert.That(cup.VolumeMl, Is.EqualTo(10f));
                 Assert.That(cup.LiquidType, Is.EqualTo(i == 0 ? FP_CupLiquidType.Type1 : FP_CupLiquidType.Mixed));
             }
             Assert.That(mixed, Is.EqualTo(1));

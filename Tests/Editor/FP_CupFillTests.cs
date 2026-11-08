@@ -105,18 +105,39 @@ namespace FuzzPhyte.Tools.Tests
         }
 
         [Test]
-        public void OverflowDoesNotChangeFullPureCupAndFullEventsRearmAfterPartialDrain()
+        public void FullCupMixesWithoutVolumeChangesAndDoesNotRepeatGenericFilled()
         {
-            int full = 0, mixed = 0;
+            int full = 0, mixed = 0, mixedFull = 0, volumeChanges = 0, typeChanges = 0;
             _cup.OnFilled.AddListener(c => full++);
             _cup.OnMixed.AddListener(c => mixed++);
+            _cup.OnMixedFilled.AddListener(c => mixedFull++);
+            _cup.OnFillChanged.AddListener(c => volumeChanges++);
+            _cup.OnLiquidTypeChanged.AddListener(c => typeChanges++);
             _cup.TryAddLiquid(FP_CupLiquidType.Type1, 10f);
-            Assert.That(_cup.TryAddLiquid(FP_CupLiquidType.Type2, 10f), Is.True);
-            Assert.That(_cup.LiquidType, Is.EqualTo(FP_CupLiquidType.Type1));
+            _cup.TryAddLiquid(FP_CupLiquidType.Type1, 10f);
             Assert.That(mixed, Is.Zero);
+            Assert.That(_cup.TryAddLiquid(FP_CupLiquidType.Type2, 10f), Is.True);
+            Assert.That(_cup.LiquidType, Is.EqualTo(FP_CupLiquidType.Mixed));
+            Assert.That(_cup.VolumeMl, Is.EqualTo(10f));
+            Assert.That(mixed, Is.EqualTo(1));
+            Assert.That(mixedFull, Is.EqualTo(1));
+            Assert.That(full, Is.EqualTo(1));
+            Assert.That(volumeChanges, Is.EqualTo(1));
+            Assert.That(typeChanges, Is.EqualTo(2));
+            _cup.TryAddLiquid(FP_CupLiquidType.Type3, 10f);
+            Assert.That(mixed, Is.EqualTo(1));
+            Assert.That(mixedFull, Is.EqualTo(1));
+            Assert.That(volumeChanges, Is.EqualTo(1));
             _cup.RemoveLiquidMl(1f);
             _cup.TryAddLiquid(FP_CupLiquidType.Type1, 1f);
             Assert.That(full, Is.EqualTo(2));
+            Assert.That(mixedFull, Is.EqualTo(2));
+            _cup.Empty();
+            Assert.That(_cup.LiquidType, Is.EqualTo(FP_CupLiquidType.None));
+            _cup.TryAddLiquid(FP_CupLiquidType.Type3, 10f);
+            _cup.TryAddLiquid(FP_CupLiquidType.Type1, 1f);
+            Assert.That(mixed, Is.EqualTo(2));
+            Assert.That(mixedFull, Is.EqualTo(3));
         }
 
         [Test]

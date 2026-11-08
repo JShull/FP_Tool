@@ -34,6 +34,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### [0.6.4] Changed
 
+- Full cups now evaluate incoming liquid types even at capacity: a different type
+  triggers Mixed/MixedFilled without increasing volume or repeating generic fill events.
 - Water particle triggers classify cup inputs, and the shared fill region can
   target cups as well as coffee makers/kettles. Existing water targets retain their behavior.
 - `FP_TipParticlePour` accepts an optional supply gate; standalone bean pouring

@@ -56,18 +56,19 @@ namespace FuzzPhyte.Tools
             Publish(0f, FP_CupLiquidType.None, false, true);
         }
 
-        /// <summary>True means this input is accepted, including discarded overflow. Different types mix only when volume is added.</summary>
+        /// <summary>True means this input is accepted. Volume clamps at capacity, but incoming types can still mix a full cup.</summary>
         public bool TryAddLiquid(FP_CupLiquidType type, float milliliters)
         {
             if (!isActiveAndEnabled || !ValidType(type) || capacityMl <= 0f ||
                 !PositiveFinite(milliliters)) return false;
             float next = (float)Math.Min((double)volumeMl + milliliters, capacityMl);
-            if (next == volumeMl) return true;
+            var nextType = IsEmpty ? type : liquidType == type ? type : FP_CupLiquidType.Mixed;
+            if (next == volumeMl && nextType == liquidType) return true;
             float previous = volumeMl;
             var previousType = liquidType;
             bool wasFull = IsFilled;
             volumeMl = next;
-            liquidType = previous <= 0f ? type : previousType == type ? type : FP_CupLiquidType.Mixed;
+            liquidType = nextType;
             Publish(previous, previousType, wasFull, false);
             return true;
         }
@@ -121,16 +122,16 @@ namespace FuzzPhyte.Tools
                 OnEmpty?.Invoke(this);
             }
             if (version != _changeVersion) return;
-            if (becameFull)
+            if (IsFilled && (becameFull || previousType != liquidType))
             {
                 TypedFilled(liquidType)?.Invoke(this);
                 if (version != _changeVersion) return;
-                OnFilled?.Invoke(this);
             }
+            if (becameFull) OnFilled?.Invoke(this);
             if (version != _changeVersion) return;
             if (previousType != liquidType) OnLiquidTypeChanged?.Invoke(this);
             if (version != _changeVersion) return;
-            OnFillChanged?.Invoke(this);
+            if (initial || previousVolume != volumeMl) OnFillChanged?.Invoke(this);
             if (version == _changeVersion) OnStateChanged?.Invoke(this);
         }
 
