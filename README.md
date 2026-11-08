@@ -308,6 +308,87 @@ shared control unit. Physical slot count does not create independent timers.
 The component's own settings control timing and heat; capability flags remain
 descriptive. No new package dependencies are required.
 
+## Electric water kettle
+
+Add `FP_EquipmentKettle` to the kettle root. Configure Water Capacity Ml, starting
+Water Ml, Heating Seconds, and Cooling Seconds. Water Hot can mark an initially
+hot fill; empty kettles have no hot/cold water state. Initial volume, full/empty,
+and hot/cold events are reported once during initialization for Inspector bindings.
+
+### Filling and heating
+
+Use the existing `FP_WaterFillRegion` with a BoxCollider at the inlet and assign
+its **Kettle** reference. Leave **Coffee Maker** empty: a region with both targets
+assigned rejects delivery. The existing `FP_WaterParticleTrigger` on the incoming
+particle system registers that region and adds its configured milliliters per
+captured droplet. Existing coffee-maker regions continue to work. Direct scripts
+can call `AddWaterMl(float)`, `SetWaterMl(float)`, or `RemoveWaterMl(float)`.
+
+Bind the power/start switch to `StartHeating()` and the stop switch to
+`CancelHeating()`. Heating requires water, an enabled/unbroken kettle, and no active
+pour. It finishes after Heating Seconds, switches power off, marks the retained
+water hot, and starts Cooling Seconds. Once that timer expires, water flips to
+cold in one step. `IsWaterHot`, `IsWaterCold`, `WaterMl`,
+`CoolingRemainingSeconds`, and `HeatingProgress01` expose the current state.
+
+This is a binary timed model, not Celsius/thermal physics. Partial draining retains
+heat and remaining cooling time. Emptying clears stored heat. Adding any accepted
+water marks the contents cold and cancels heating; adding excess to an already full
+kettle changes nothing. Reheating pauses the old cooling countdown while heating,
+then restarts it on completion. Cancelling heating retains any previously hot
+water and resumes its remaining cooling timer. Cooling continues when the heater
+is off or broken, while active ticks continue.
+
+Like the coffee maker, the kettle uses `FP_TickSystem`. Disabling cancels heating,
+stops pouring, and unregisters, but retains volume and heat/cooling state. Cooling
+is paused while disabled or while the tick driver is paused; it resumes on enable.
+For a custom driver, disable automatic tick registration and call `Tick(dt)`.
+An oversized tick accounts for cooling time after heating finishes within that tick.
+
+### Tipping and pouring
+
+1. Add the existing `FP_TipParticlePour` to the kettle/pour origin. Assign its origin,
+   upright axis, angle thresholds, and the particle system at the spout, as with beans.
+2. Add `FP_KettlePour` to the **same GameObject as FP_TipParticlePour**, assign the
+   kettle, and set Flow Ml Per Second (default 150). It gates emission by available
+   water, active state, and condition. Empty/broken/disabled kettles cannot pour.
+3. Pouring drains stored volume and stops emission immediately on empty. Starting
+   a pour cancels heating; the current hot/cold state remains until a refill, empty,
+   or cooling expiry. Returning upright stops new emission and retains falling droplets.
+4. To refill another machine, put `FP_WaterParticleTrigger` on the spout particle
+   GameObject and assign that machine's water region. Use World simulation space.
+   Match particle emission rate × Milliliters Per Particle to Flow Ml Per Second.
+
+The pourer advances using scaled Update time. For a custom flow driver, turn off
+Auto Advance on `FP_KettlePour` and call `AdvancePour(dt)` while it stays enabled.
+The default gate added to `FP_TipParticlePour` allows pouring unless a supply binder
+sets `SetPouringAllowed(false)`, so existing bean pourers retain their behavior.
+The pour binder owns the gate while enabled; assign its kettle before enabling it.
+Volume drains by configured elapsed-time flow, independently of particle emission
+and capture. Droplets are a visual refill interaction, not exact fluid conservation;
+downstream receivers currently transfer volume only, not the source's heat state.
+
+| Event | Use |
+| --- | --- |
+| `OnStarted` / `OnHeating` | Accepted heat start and one-time heater effects. |
+| `OnHeatingProgress` | Advancing heating timer/display. |
+| `OnFinished` | Heating completed; water is hot and retained. |
+| `OnCancelled` | Active heating interrupted by stop, refill, empty, pouring, disable, or break. |
+| `OnNoWater` | Heat request rejected because empty. |
+| `OnWaterEmpty` / `OnWaterAvailable` | Initial state and subsequent empty/nonempty transitions. |
+| `OnWaterFull` | Initial full state or a new crossing to capacity. |
+| `OnWaterChanged` | Initial supply and actual volume changes. |
+| `OnWaterHot` / `OnWaterCold` | Initial nonempty temperature state and subsequent transitions. Empty has neither state. |
+| `OnPourStarted` / `OnPourStopped` | Pouring sound/visual feedback. |
+| `OnBroken` / `OnRepaired` | Condition feedback; repair does not restart heating. |
+| `OnStateChanged` | General status/display refresh. |
+
+Events pass the kettle. Existing power/toggle/timer/break/repair commands are
+supported; `StartTimerSeconds` uses FValue as a heating duration. Equipment data
+may describe Supports Timer/Fill/Heat=true and Sub Unit Count=1; the component's
+settings drive this simplified model. Stored hot water does not heat arbitrary
+contained energy-reactive objects (`EmitPowerUnit` is zero).
+
 ## Particle bean refill sample
 
 See [Samples/BeanPour](Samples/BeanPour/README.md) for a wired prefab with

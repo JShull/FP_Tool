@@ -17,6 +17,7 @@ namespace FuzzPhyte.Tools
         [SerializeField, Range(0f, 180f)] private float startAngle = 100f;
         [SerializeField, Range(0f, 180f)] private float stopAngle = 80f;
         public bool IsPouring { get; private set; }
+        private bool _pouringAllowed = true;
         public float TipAngle => Vector3.Angle((origin != null ? origin : transform).TransformDirection(localUpAxis), Vector3.up);
         public UnityEvent OnPourStarted = new UnityEvent();
         public UnityEvent OnPourStopped = new UnityEvent();
@@ -36,7 +37,15 @@ namespace FuzzPhyte.Tools
         public void RefreshPouring()
         {
             if (!isActiveAndEnabled || pourParticles == null) return;
-            SetPouring(IsPouring ? TipAngle > stopAngle : TipAngle >= startAngle);
+            SetPouring(_pouringAllowed && (IsPouring ? TipAngle > stopAngle : TipAngle >= startAngle));
+        }
+
+        /// <summary>Optional supply gate. Existing standalone pourers default to allowed.</summary>
+        public void SetPouringAllowed(bool allowed)
+        {
+            _pouringAllowed = allowed;
+            if (allowed) RefreshPouring();
+            else SetPouring(false);
         }
 
         private void SetPouring(bool pouring)

@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### [0.6.4] Added
 
+- 2026-11-08: Electric kettle with timed heating, retained hot/cold water and timed
+  cooling, volume/temperature/condition events, and finite-volume tipped pouring.
+- Kettle target support in the existing water particle refill region, setup notes,
+  and Edit Mode/Play Mode regression coverage.
 - Coffee maker `OnCupRemoved` departure event for idle and brewing visual feedback,
   alongside the existing cup-arrival and missing-cup events.
 - Coffee maker `OnEnoughWater` / `OnWaterFull` threshold events with initial-supply
@@ -27,6 +31,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### [0.6.4] Changed
 
+- `FP_TipParticlePour` accepts an optional supply gate; standalone bean pouring
+  remains allowed by default.
 - Coffee maker supply shortages now publish existing `OnNoBeans` / `OnNoWater`
   events after brew completion/cancellation when the next recipe is unavailable,
   without another start attempt. Mid-brew refills clear pending notifications;
