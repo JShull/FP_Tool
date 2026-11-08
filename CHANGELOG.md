@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### [0.6.4] Added
 
+- Finite jar contents with interface-driven reverse-trigger extraction into tools,
+  content identity/portion metadata, entry/exit/transfer events, optional existing
+  tip-controller pouring, and a bottom-anchored normalized fill mesh visual.
+- Example spoon/knife receiver, custom receiver contract, setup documentation, and
+  Edit Mode/Play Mode tests for jar transfer, contact tracking, pouring, and visuals.
 - Fillable cups with three classified particle inputs, a single shared volume,
   sticky Mixed state, generic/typed/mixed full and empty events, reset to None,
   and finite pouring through the existing tip controller.

@@ -308,6 +308,104 @@ shared control unit. Physical slot count does not create independent timers.
 The component's own settings control timing and heat; capability flags remain
 descriptive. No new package dependencies are required.
 
+## Jars and tool extraction
+
+`FP_JarContent` represents a jar's fixed content identity and stored volume.
+Use Content Id values such as `PeanutButter`, `Mayo`, `Yogurt`, or `TomatoSauce`.
+Configure Capacity Ml, Amount Ml, and Take Amount Ml (default 5 ml). Milliliters
+here are authored portion volumes, not weights or a viscosity/fluid simulation.
+`Fill01` ranges from zero (empty) to one (full). The jar retains its content ID
+when empty, so refilling it does not require selecting its food again.
+
+### Reverse trigger: jar to tool
+
+1. Add `FP_JarAccessRegion` to a child with one 3D trigger collider around the
+   intended scoop area and assign its Jar reference.
+2. Add `FP_JarContentTool` to a spoon/knife root, or implement
+   `IFPJarContentReceiver` on your own MonoBehaviour. Its colliders can be on the
+   root or children; the nearest receiver ancestor is used. A Rigidbody on at least
+   one trigger participant and compatible physics layers are required, as with the
+   other equipment trigger regions.
+3. By default, one logical tool entry offers up to Take Amount Ml. Only the amount
+   the receiver actually accepts is deducted. Compound colliders and overlapping
+   regions for the same jar count as one entry, not multiple scoops. Staying inside
+   does not repeatedly drain the jar. Exit/re-entry can take another portion.
+4. For a button-controlled scoop, turn **Take On Tool Enter** off, and call
+   `TakeWithTool(MonoBehaviour)` while that tool is inside. The direct
+   `TryTakeContent(IFPJarContentReceiver)` method is also available for scripted
+   integrations that manage their own access rules.
+
+`FP_JarContentTool` stores AmountMl, ContentId, and LastSource after it leaves the
+jar. Set its capacity for a spoon or knife; a nearly-full tool accepts only its
+remaining capacity, and a full tool takes nothing. It holds one food at a time
+and rejects a different content ID until emptied. Use its `RemoveContentMl(float)`
+or `Empty()` when your spreading/eating/placing interaction consumes the portion.
+Its OnContentReceived, OnContentChanged, OnFilled, and OnEmpty events can control
+the tool's visible portion; OnEnteredJar / OnExitedJar provide interaction feedback.
+Tool-empty clears its stored ID and LastSource. An ordinary unmarked object is
+ignored. Disappearing/disabled colliders release their contacts, and disabled or
+destroyed tools do not leave permanent jar occupancy.
+
+The receiver interface contract is:
+
+```csharp
+void OnJarEntered(FP_JarContent jar);
+void OnJarExited(FP_JarContent jar);
+float ReceiveJarContent(FP_JarContent source, string contentId, float offeredMl);
+void OnJarContentReceived(FP_JarContent source, string contentId, float acceptedMl);
+```
+
+ReceiveJarContent stores the accepted portion and returns an amount between zero
+and the offer. It must not throw, mutate the source, or publish external events.
+The source guards against reentrant quantity changes while acceptance runs. After the jar
+debit commits, OnJarContentReceived is called to publish receiver feedback. This
+ensures tool and jar quantities are updated before VFX/interaction callbacks run.
+Return zero for rejection. Implementing a custom receiver lets you choose your
+own capacity, filtering, and downstream item behavior without changing the jar.
+
+### Optional pouring
+
+Pouring is **disabled by default** on FP_JarContent. Peanut butter or mayo can stay
+tool-only. For sauce/yogurt, enable **Pouring Enabled**, add `FP_JarPour` alongside
+the existing `FP_TipParticlePour`, and assign the jar and spout particle system.
+The existing angle thresholds/hysteresis are reused. Flow Ml Per Second drains
+stored volume while tipped; empty, disabled, or pour-disabled jars stop emission.
+`SetPouringEnabled(bool)` can switch this at runtime without disabling tool access.
+For custom pouring updates, disable Auto Advance and call `AdvancePour(dt)` on an
+enabled FP_JarPour. Match emission/particle transfer settings to the authored flow
+rate if particles are also being used to refill another container. The jar's food
+identity is passed to tools; particle outlets need their own explicit target/type
+configuration. No automatic solid-food/temperature conversion is provided.
+
+### Content mesh
+
+Add `FP_JarFillVisual`, assign the jar and a separate content-mesh Transform, and
+author that mesh at its **full** scale/position before enabling the binder. It
+captures that full baseline once and scales only local Y by Fill01. Anchor Bottom
+uses the MeshFilter mesh bounds to keep its bottom fixed as it shrinks; for meshes
+without a MeshFilter, use a bottom pivot or disable anchoring. Hide When Empty
+disables its Renderer at zero, then restores it on refill. Disabling/re-enabling
+the binder does not recapture a partially-shrunken scale. Do not use the jar root
+or the tool access region as the visual mesh transform.
+
+| Jar event | Use |
+| --- | --- |
+| `OnToolEntered` / `OnToolExited` | Spoon/knife feedback; passes the jar and actual receiver MonoBehaviour. |
+| `OnContentTaken` | Successful extraction after receiver acceptance; passes jar and receiver (null for plain C# receivers). |
+| `OnContentChanged` | Initial quantity and actual amount changes; refresh Fill01 or a display. |
+| `OnEmpty` / `OnFull` | Initial state and transitions to the corresponding limit. |
+| `OnPourStarted` / `OnPourStopped` | Optional pouring effects/audio. |
+| `OnStateChanged` | General state changes, including pour enablement. |
+
+Amounts clamp to capacity; rejected or full tools do not deplete the jar. Disabling
+the jar releases tracked tools and stops pouring while retaining its amount/ID.
+Known contacts can re-enter after re-enabling; new or lost contacts follow Unity
+Enter/Stay callbacks. No central tick system is needed. Source geometry and the
+actual scoop region must be placed to match the consuming scene; volume extraction
+does not simulate scraping, digging, or viscosity. The supplied receiver does not
+automatically apply its portion to bread or return it to a jar—bind that interaction
+through its events or your own interface implementation.
+
 ## Fillable cups: three inputs and Mixed
 
 Add `FP_CupFill` to a cup root and configure Capacity Ml (default 250). It adds the
