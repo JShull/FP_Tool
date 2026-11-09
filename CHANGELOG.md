@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### [0.6.4] Added
 
+- Destination-transfer regions and a bread/final-surface receiver interface for
+  jar-to-tool-to-destination workflows, partial acceptance, automatic tool reset,
+  source metadata snapshots, and contact/received events with regression tests.
 - Finite jar contents with interface-driven reverse-trigger extraction into tools,
   content identity/portion metadata, entry/exit/transfer events, optional existing
   tip-controller pouring, and a bottom-anchored normalized fill mesh visual.

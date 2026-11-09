@@ -402,9 +402,79 @@ the jar releases tracked tools and stops pouring while retaining its amount/ID.
 Known contacts can re-enter after re-enabling; new or lost contacts follow Unity
 Enter/Stay callbacks. No central tick system is needed. Source geometry and the
 actual scoop region must be placed to match the consuming scene; volume extraction
-does not simulate scraping, digging, or viscosity. The supplied receiver does not
-automatically apply its portion to bread or return it to a jar—bind that interaction
-through its events or your own interface implementation.
+does not simulate scraping, digging, or viscosity. The tool does not automatically
+return its portion to a jar. Use the destination-transfer setup below for bread
+and other final placement surfaces.
+
+### Destination transfer: tool to bread
+
+1. Add `FP_ContentDestination` to the bread/final object's root. Configure Capacity
+   Ml (default 25). Accepted Content Id is an optional exact ID filter; leave it
+   blank to accept the first food. The supplied receiver holds one content identity
+   at a time and rejects a different one until `Empty()` is called. Implement
+   `IFPToolContentReceiver` for your own layering/mixing or application logic.
+2. Add a child with one 3D trigger collider and `FP_ContentDestinationRegion`.
+   Assign the destination **component** in its Destination field. Any MonoBehaviour
+   implementing IFPToolContentReceiver is supported. Keep this reference stable
+   while contacts are active; disable the region before changing it.
+3. Use the existing `FP_JarContentTool` on the knife/spoon root, with its colliders
+   on that object or children. Enter the jar to load it, then move it onto the
+   destination region. Unity's normal Rigidbody/layer trigger requirements apply.
+
+**Transfer On Enter** defaults on. One logical tool entry attempts to apply its
+held portion. Multiple tool colliders and overlapping regions for the same
+destination do not duplicate entry or transfer. Staying in contact does not retry
+continuously, even if the tool gets refilled or the destination is cleared. Exit
+and re-enter to retry, or call `tool.TransferToDestination(destinationComponent)`
+while touching. Turn Transfer On Enter off for button-controlled application.
+Direct scripts can call `TryTransferContent(IFPToolContentReceiver)` when they
+manage their own access rules.
+
+Only the amount accepted by the destination leaves the tool. A full transfer
+clears AmountMl, ContentId, and LastSource and fires the tool's existing OnEmpty,
+so your loaded-content visual resets normally. A partial transfer leaves the
+remaining amount and its metadata intact. Full, filtered, disabled, or rejecting
+destinations do not discard the portion. **Do not additionally call tool.Empty
+from the destination event** unless you intend to throw away any remainder.
+
+The destination retains AmountMl, ContentId, LastSourceJar, LastTool, and
+LastAcceptedAmountMl. Its **OnContentReceived** event fires after both quantities
+have been updated, but before the tool's OnEmpty visual reset. For color/appearance,
+copy your custom loaded-color component from LastTool here, or read your metadata
+component from LastSourceJar. The tool's own LastSource may already be null, so use
+the destination's snapshot for the original jar. Original jars may be destroyed;
+ContentId remains available even when that source reference is no longer valid.
+LastAcceptedAmountMl is the latest portion, while AmountMl is the destination total.
+
+| Destination event | Use |
+| --- | --- |
+| `OnToolEntered` / `OnToolExited` | Contact feedback; passes destination and tool. |
+| `OnContentReceived` | Apply the received food/color/VFX; passes destination. |
+| `OnContentChanged` | Refresh accumulated amount/coverage. |
+| `OnFilled` / `OnEmpty` | Capacity reached or receiver cleared (initially empty also reports OnEmpty). |
+
+The tool also exposes OnDestinationEntered / OnDestinationExited (tool and target
+MonoBehaviour), plus OnContentTransferred after a successful transfer. Its existing
+OnEmpty is the reset hook for tool visuals. Contact cleanup handles disabled and
+destroyed colliders, tools, and destinations. Disabled tools retain their contents.
+
+Custom destination contract:
+
+```csharp
+void OnContentToolEntered(FP_JarContentTool tool);
+void OnContentToolExited(FP_JarContentTool tool);
+float ReceiveToolContent(FP_JarContentTool tool, FP_JarContent sourceJar,
+    string contentId, float offeredMl);
+void OnToolContentReceived(FP_JarContentTool tool, FP_JarContent sourceJar,
+    string contentId, float acceptedMl);
+```
+
+ReceiveToolContent stores an accepted amount from zero to offeredMl and returns
+that amount, without throwing, mutating the tool, or invoking external callbacks.
+After debit commits, OnToolContentReceived publishes feedback using the source
+snapshot. Source mutation/reentrant transfer is blocked during acceptance. The
+supplied destination stores data and exposes events; attach your bread material,
+spread mesh, or VFX behavior to those events. No central tick system is required.
 
 ## Fillable cups: three inputs and Mixed
 
