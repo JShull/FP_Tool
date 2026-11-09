@@ -199,6 +199,40 @@ namespace FuzzPhyte.Tools.Tests
             Assert.That(mesh.GetComponent<Renderer>().enabled, Is.True);
         }
 
+        [TestCase(1f, 0f, 0f, 1f, 4f, 6f, true)]
+        [TestCase(0f, 0f, -1f, 2f, 4f, 3f, true)]
+        [TestCase(1f, 0.5f, -1f, 1f, 3f, 3f, true)]
+        [TestCase(0f, 0f, 0f, 2f, 4f, 6f, true)]
+        [TestCase(1f, 1f, 1f, 1f, 2f, 3f, false)]
+        public void FillVisualScalesSelectedAxesAndPreservesChosenEdge(float x, float y, float z,
+            float expectedX, float expectedY, float expectedZ, bool anchored)
+        {
+            var mesh = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            Object.DestroyImmediate(mesh.GetComponent<Collider>());
+            mesh.transform.SetParent(_root.transform, false);
+            mesh.transform.localScale = new Vector3(2f, 4f, 6f);
+            mesh.transform.localPosition = new Vector3(3f, 2f, 1f);
+            mesh.transform.localRotation = Quaternion.Euler(25f, 45f, 15f);
+            var anchor = new Vector3(x < 0f ? 0.5f : -0.5f, y < 0f ? 0.5f : -0.5f, z < 0f ? 0.5f : -0.5f);
+            var originalAnchor = mesh.transform.TransformPoint(anchor);
+            var originalPosition = mesh.transform.localPosition;
+            var visual = Child("Directional fill visual").AddComponent<FP_JarFillVisual>();
+            Set(visual, "jar", _jar);
+            Set(visual, "contentMesh", mesh.transform);
+            Set(visual, "scaleDirection", new Vector3(x, y, z));
+            Set(visual, "anchorBottom", anchored);
+            Invoke(visual, "OnEnable");
+            _jar.SetAmountMl(5f);
+            Assert.That(Vector3.Distance(mesh.transform.localScale, new Vector3(expectedX, expectedY, expectedZ)), Is.LessThan(0.00001f));
+            if (anchored)
+                Assert.That(Vector3.Distance(mesh.transform.TransformPoint(anchor), originalAnchor), Is.LessThan(0.00001f));
+            else
+                Assert.That(mesh.transform.localPosition, Is.EqualTo(originalPosition));
+            _jar.SetAmountMl(10f);
+            Assert.That(mesh.transform.localScale, Is.EqualTo(new Vector3(2f, 4f, 6f)));
+            Assert.That(mesh.transform.localPosition, Is.EqualTo(originalPosition));
+        }
+
         [Test]
         public void EmptyFullEdgesAndRefillsAreClampedAndOneShot()
         {

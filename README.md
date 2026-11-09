@@ -411,9 +411,15 @@ configuration. No automatic solid-food/temperature conversion is provided.
 
 Add `FP_JarFillVisual`, assign the jar and a separate content-mesh Transform, and
 author that mesh at its **full** scale/position before enabling the binder. It
-captures that full baseline once and scales only local Y by Fill01. Anchor Bottom
-uses the MeshFilter mesh bounds to keep its bottom fixed as it shrinks; for meshes
-without a MeshFilter, use a bottom pivot or disable anchoring. Hide When Empty
+captures that full baseline once. **Scale Direction** controls local-axis shrink
+weights: `(0,1,0)` (default) shrinks Y, `(1,0,0)` shrinks X, `(0,0,1)` shrinks Z,
+and `(1,1,1)` shrinks all axes. Each magnitude is clamped to 0–1: zero preserves
+that axis, one collapses it at empty, and fractional values squeeze it less.
+This vector uses the mesh's local axes; it is not normalized.
+**Anchor Edge** (previously Anchor Bottom) uses the MeshFilter bounds to keep the
+minimum side fixed on positive axes, or the maximum side on negative axes. For
+example `(0,-1,0)` shrinks Y toward the top. Turn anchoring off to shrink around
+the mesh pivot. For meshes without a MeshFilter, anchoring uses the local origin. Hide When Empty
 disables its Renderer at zero, then restores it on refill. Disabling/re-enabling
 the binder does not recapture a partially-shrunken scale. Do not use the jar root
 or the tool access region as the visual mesh transform.

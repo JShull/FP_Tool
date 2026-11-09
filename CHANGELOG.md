@@ -42,6 +42,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### [0.6.4] Changed
 
+- Jar fill visuals now support signed local-axis scale weights and matching edge
+  anchoring for adjustable removal/squeezing; existing Y/bottom behavior remains the default.
+
 - Jar/tool/destination food classification now supports Type1, Type2, Type3, and
   sticky Mixed with typed filled/empty, mixed, and type-change events. Content IDs
   remain metadata; destination ID filters and one-ID-only acceptance are removed.
