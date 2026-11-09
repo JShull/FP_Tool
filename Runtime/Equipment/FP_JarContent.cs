@@ -18,6 +18,7 @@ namespace FuzzPhyte.Tools
     public class FP_JarContent : MonoBehaviour
     {
         [SerializeField] private string contentId = "PeanutButter";
+        [SerializeField] private FP_ContentType contentType = FP_ContentType.Type1;
         [SerializeField, Min(0f)] private float capacityMl = 500f;
         [SerializeField, Min(0f)] private float amountMl = 500f;
         [SerializeField, Min(0.01f)] private float takeAmountMl = 5f;
@@ -30,6 +31,7 @@ namespace FuzzPhyte.Tools
             new Dictionary<MonoBehaviour, HashSet<FP_JarAccessRegion>>();
 
         public string ContentId => contentId;
+        public FP_ContentType ContentType => contentType;
         public float AmountMl => amountMl;
         public float CapacityMl => capacityMl;
         public float Fill01 => capacityMl > 0f ? Mathf.Clamp01(amountMl / capacityMl) : 0f;
@@ -183,6 +185,7 @@ namespace FuzzPhyte.Tools
         private float ClampAmount(float value) => float.IsNaN(value) || float.IsInfinity(value) ? 0f : Mathf.Clamp(value, 0f, capacityMl);
         private void Sanitize()
         {
+            if (contentType < FP_ContentType.Type1 || contentType > FP_ContentType.Mixed) contentType = FP_ContentType.Type1;
             if (string.IsNullOrWhiteSpace(contentId)) contentId = "Content";
             capacityMl = PositiveFinite(capacityMl) ? capacityMl : 0f;
             amountMl = ClampAmount(amountMl);

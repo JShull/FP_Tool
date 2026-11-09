@@ -31,6 +31,58 @@ namespace FuzzPhyte.Tools.Tests
         }
 
         [UnityTest]
+        public IEnumerator DifferentJarsMixOnToolAndTransferThroughOneDestinationTrigger()
+        {
+            _scene = SceneManager.CreateScene("Mixed food workflow", new CreateSceneParameters(LocalPhysicsMode.Physics3D));
+            _root = new GameObject("Mixed workflow");
+            _root.SetActive(false);
+            SceneManager.MoveGameObjectToScene(_root, _scene);
+            for (int i = 0; i < 2; i++)
+            {
+                var obj = Child("Source " + i);
+                obj.transform.localPosition = Vector3.right * (i * 3f);
+                var jar = obj.AddComponent<FP_JarContent>();
+                Set(jar, "contentType", i == 0 ? FP_ContentType.Type1 : FP_ContentType.Type2);
+                Set(jar, "contentId", i == 0 ? "PeanutButter" : "Mayo");
+                obj.AddComponent<BoxCollider>().isTrigger = true;
+                Set(obj.AddComponent<FP_JarAccessRegion>(), "jar", jar);
+            }
+            var bread = Child("Bread");
+            bread.transform.localPosition = Vector3.right * 6f;
+            var destination = bread.AddComponent<FP_ContentDestination>();
+            Set(destination, "capacityMl", 10f);
+            bread.AddComponent<BoxCollider>().isTrigger = true;
+            Set(bread.AddComponent<FP_ContentDestinationRegion>(), "destination", destination);
+            var knife = Child("Knife");
+            knife.transform.localPosition = Vector3.left * 3f;
+            knife.AddComponent<Rigidbody>().isKinematic = true;
+            knife.AddComponent<BoxCollider>().size = Vector3.one * 0.1f;
+            var tool = knife.AddComponent<FP_JarContentTool>();
+            Set(tool, "capacityMl", 10f);
+            _root.SetActive(true);
+            yield return null;
+            int toolMixed = 0, destinationMixed = 0, mixedEmpty = 0;
+            tool.OnMixed.AddListener(t => toolMixed++);
+            tool.OnMixedEmpty.AddListener(t => mixedEmpty++);
+            destination.OnMixed.AddListener(d => destinationMixed++);
+            for (int i = 0; i < 3; i++)
+            {
+                knife.transform.localPosition = Vector3.right * (i * 3f);
+                Physics.SyncTransforms();
+                _scene.GetPhysicsScene().Simulate(0.02f);
+                if (i == 0) Assert.That(tool.ContentType, Is.EqualTo(FP_ContentType.Type1));
+                if (i == 1) Assert.That(tool.ContentType, Is.EqualTo(FP_ContentType.Mixed));
+            }
+            Assert.That(destination.AmountMl, Is.EqualTo(10f));
+            Assert.That(destination.ContentType, Is.EqualTo(FP_ContentType.Mixed));
+            Assert.That(tool.AmountMl, Is.Zero);
+            Assert.That(tool.ContentType, Is.EqualTo(FP_ContentType.None));
+            Assert.That(toolMixed, Is.EqualTo(1));
+            Assert.That(destinationMixed, Is.EqualTo(1));
+            Assert.That(mixedEmpty, Is.EqualTo(1));
+        }
+
+        [UnityTest]
         public IEnumerator JarToKnifeToBreadTransfersAndResetsThroughActualTriggers()
         {
             _scene = SceneManager.CreateScene("Destination workflow test", new CreateSceneParameters(LocalPhysicsMode.Physics3D));

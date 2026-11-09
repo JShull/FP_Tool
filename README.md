@@ -310,12 +310,17 @@ descriptive. No new package dependencies are required.
 
 ## Jars and tool extraction
 
-`FP_JarContent` represents a jar's fixed content identity and stored volume.
-Use Content Id values such as `PeanutButter`, `Mayo`, `Yogurt`, or `TomatoSauce`.
+`FP_JarContent` represents a jar's source food type and stored volume.
+Select **Content Type**: `Type1`, `Type2`, `Type3`, or `Mixed` (`FP_ContentType`).
+Assign the same slots consistently across jars, tools, and destination VFX: for
+example Type1 = peanut butter, Type2 = mayo, Type3 = yogurt. Content Id is an
+optional descriptive label such as `PeanutButter`; it does not restrict acceptance.
+Existing jars default to Type1; select Type2/Type3 on other foods to distinguish them.
+No trigger-specific ID filter or separate trigger per food is needed.
 Configure Capacity Ml, Amount Ml, and Take Amount Ml (default 5 ml). Milliliters
 here are authored portion volumes, not weights or a viscosity/fluid simulation.
 `Fill01` ranges from zero (empty) to one (full). The jar retains its content ID
-when empty, so refilling it does not require selecting its food again.
+and configured source type when empty, so refilling it does not require selecting its food again.
 
 ### Reverse trigger: jar to tool
 
@@ -337,12 +342,15 @@ when empty, so refilling it does not require selecting its food again.
 
 `FP_JarContentTool` stores AmountMl, ContentId, and LastSource after it leaves the
 jar. Set its capacity for a spoon or knife; a nearly-full tool accepts only its
-remaining capacity, and a full tool takes nothing. It holds one food at a time
-and rejects a different content ID until emptied. Use its `RemoveContentMl(float)`
+remaining capacity, and a full tool takes nothing. Different incoming types combine
+into a single `Mixed` state; the mix stays Mixed through partial consumption or
+transfer, until completely emptied. Different labels assigned the same type remain
+that type. ContentId reports `Mixed` for a mixture and the latest label otherwise.
+Use its `RemoveContentMl(float)`
 or `Empty()` when your spreading/eating/placing interaction consumes the portion.
 Its OnContentReceived, OnContentChanged, OnFilled, and OnEmpty events can control
 the tool's visible portion; OnEnteredJar / OnExitedJar provide interaction feedback.
-Tool-empty clears its stored ID and LastSource. An ordinary unmarked object is
+Tool-empty clears its stored ID and LastSource, and resets ContentType to None. An ordinary unmarked object is
 ignored. Disappearing/disabled colliders release their contacts, and disabled or
 destroyed tools do not leave permanent jar occupancy.
 
@@ -362,6 +370,28 @@ debit commits, OnJarContentReceived is called to publish receiver feedback. This
 ensures tool and jar quantities are updated before VFX/interaction callbacks run.
 Return zero for rejection. Implementing a custom receiver lets you choose your
 own capacity, filtering, and downstream item behavior without changing the jar.
+
+### Food type and mixture events
+
+Both `FP_JarContentTool` and `FP_ContentDestination` expose `ContentType` and:
+
+- `OnType1Filled`, `OnType2Filled`, `OnType3Filled`, `OnMixedFilled` when capacity
+  is reached with that type.
+- `OnType1Empty`, `OnType2Empty`, `OnType3Empty`, `OnMixedEmpty` when the previously
+  held type empties. Callbacks already see ContentType = None.
+- `OnMixed` once when content first becomes Mixed, even before reaching capacity.
+- `OnContentTypeChanged` for type transitions, including reset to None.
+
+Generic OnFilled/OnEmpty remain available. Partial draining preserves the type;
+fully emptying resets the mix so the next food starts fresh. Only positive accepted
+portions affect food type: a full tool/destination rejects an offered portion without
+mixing or removing it from the source. This preserves finite scooped portions; cup
+particle overflow still follows its existing liquid mixing policy.
+LastSource/LastSourceJar identify the most recent contributing jar, not every
+ingredient of a mix. Custom appearance can use ContentType to select a fourth VFX.
+Existing receiver interface signatures remain compatible: read source.ContentType
+in ReceiveJarContent and capture tool.ContentType inside ReceiveToolContent, before
+the tool debit clears it. Content IDs are labels, not an acceptance contract.
 
 ### Optional pouring
 
@@ -409,10 +439,10 @@ and other final placement surfaces.
 ### Destination transfer: tool to bread
 
 1. Add `FP_ContentDestination` to the bread/final object's root. Configure Capacity
-   Ml (default 25). Accepted Content Id is an optional exact ID filter; leave it
-   blank to accept the first food. The supplied receiver holds one content identity
-   at a time and rejects a different one until `Empty()` is called. Implement
-   `IFPToolContentReceiver` for your own layering/mixing or application logic.
+   Ml (default 25). The same destination accepts all three food types and Mixed.
+   Adding a different type makes its accumulated content Mixed until `Empty()`;
+   there is no Accepted Content Id filter. Old serialized ID filters no longer
+   restrict acceptance. Implement `IFPToolContentReceiver` for custom application logic.
 2. Add a child with one 3D trigger collider and `FP_ContentDestinationRegion`.
    Assign the destination **component** in its Destination field. Any MonoBehaviour
    implementing IFPToolContentReceiver is supported. Keep this reference stable
@@ -433,11 +463,11 @@ manage their own access rules.
 Only the amount accepted by the destination leaves the tool. A full transfer
 clears AmountMl, ContentId, and LastSource and fires the tool's existing OnEmpty,
 so your loaded-content visual resets normally. A partial transfer leaves the
-remaining amount and its metadata intact. Full, filtered, disabled, or rejecting
+remaining amount and its metadata intact. Full, disabled, or rejecting
 destinations do not discard the portion. **Do not additionally call tool.Empty
 from the destination event** unless you intend to throw away any remainder.
 
-The destination retains AmountMl, ContentId, LastSourceJar, LastTool, and
+The destination retains AmountMl, ContentType, ContentId, LastSourceJar, LastTool, and
 LastAcceptedAmountMl. Its **OnContentReceived** event fires after both quantities
 have been updated, but before the tool's OnEmpty visual reset. For color/appearance,
 copy your custom loaded-color component from LastTool here, or read your metadata

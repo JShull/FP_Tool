@@ -13,13 +13,15 @@ namespace FuzzPhyte.Tools
     [Serializable] public class JarContentToolEvent : UnityEvent<FP_JarContentTool> { }
     [Serializable] public class ToolDestinationEvent : UnityEvent<FP_JarContentTool, MonoBehaviour> { }
 
-    /// <summary>Example spoon/knife receiver. Holds one content identity until emptied.</summary>
+    /// <summary>Example spoon/knife receiver. Combines food types until emptied.</summary>
     [DisallowMultipleComponent]
     public class FP_JarContentTool : MonoBehaviour, IFPJarContentReceiver
     {
         [SerializeField, Min(0f)] private float capacityMl = 5f;
         private float _amountMl;
         private string _contentId = string.Empty;
+        private FP_ContentType _contentType;
+        private FP_ContentType _reportedType;
         private bool _reportedFull;
         private uint _version;
         private bool _transferring;
@@ -27,12 +29,23 @@ namespace FuzzPhyte.Tools
             new Dictionary<MonoBehaviour, HashSet<FP_ContentDestinationRegion>>();
         public float AmountMl => _amountMl;
         public string ContentId => _contentId;
+        public FP_ContentType ContentType => _contentType;
         public float Fill01 => capacityMl > 0f ? Mathf.Clamp01(_amountMl / capacityMl) : 0f;
         public FP_JarContent LastSource { get; private set; }
         public JarContentToolEvent OnContentReceived = new JarContentToolEvent();
         public JarContentToolEvent OnContentChanged = new JarContentToolEvent();
         public JarContentToolEvent OnFilled = new JarContentToolEvent();
         public JarContentToolEvent OnEmpty = new JarContentToolEvent();
+        public JarContentToolEvent OnType1Filled = new JarContentToolEvent();
+        public JarContentToolEvent OnType2Filled = new JarContentToolEvent();
+        public JarContentToolEvent OnType3Filled = new JarContentToolEvent();
+        public JarContentToolEvent OnMixedFilled = new JarContentToolEvent();
+        public JarContentToolEvent OnType1Empty = new JarContentToolEvent();
+        public JarContentToolEvent OnType2Empty = new JarContentToolEvent();
+        public JarContentToolEvent OnType3Empty = new JarContentToolEvent();
+        public JarContentToolEvent OnMixedEmpty = new JarContentToolEvent();
+        public JarContentToolEvent OnMixed = new JarContentToolEvent();
+        public JarContentToolEvent OnContentTypeChanged = new JarContentToolEvent();
         public JarToolEvent OnEnteredJar = new JarToolEvent();
         public JarToolEvent OnExitedJar = new JarToolEvent();
         public JarContentToolEvent OnContentTransferred = new JarContentToolEvent();
@@ -44,12 +57,15 @@ namespace FuzzPhyte.Tools
         public void OnJarExited(FP_JarContent jar) => OnExitedJar?.Invoke(jar, this);
         public float ReceiveJarContent(FP_JarContent source, string id, float offeredMl)
         {
-            if (!isActiveAndEnabled || _transferring || string.IsNullOrEmpty(id) || offeredMl <= 0f ||
-                float.IsNaN(offeredMl) || float.IsInfinity(offeredMl) || (_amountMl > 0f && _contentId != id)) return 0f;
+            if (!isActiveAndEnabled || _transferring || offeredMl <= 0f ||
+                float.IsNaN(offeredMl) || float.IsInfinity(offeredMl)) return 0f;
             float accepted = Mathf.Min(offeredMl, Mathf.Max(0f, capacityMl - _amountMl));
             if (accepted <= 0f) return 0f;
             _amountMl += accepted;
-            _contentId = id;
+            var incoming = source != null ? source.ContentType : FP_ContentType.Type1;
+            _contentType = _contentType == FP_ContentType.None ? incoming :
+                _contentType == incoming ? _contentType : FP_ContentType.Mixed;
+            _contentId = _contentType == FP_ContentType.Mixed ? "Mixed" : id;
             LastSource = source;
             return accepted;
         }
@@ -64,7 +80,7 @@ namespace FuzzPhyte.Tools
             float removed = Mathf.Min(_amountMl, amount);
             if (removed <= 0f) return 0f;
             _amountMl -= removed;
-            if (_amountMl == 0f) { _contentId = string.Empty; LastSource = null; }
+            if (_amountMl == 0f) { _contentId = string.Empty; _contentType = FP_ContentType.None; LastSource = null; }
             Publish();
             if (_amountMl == 0f) OnEmpty?.Invoke(this);
             return removed;
@@ -86,7 +102,7 @@ namespace FuzzPhyte.Tools
                 accepted = receiver.ReceiveToolContent(this, sourceJar, id, offered);
                 accepted = accepted > 0f && !float.IsInfinity(accepted) ? Mathf.Min(accepted, offered) : 0f;
                 _amountMl -= accepted;
-                if (_amountMl == 0f) { _contentId = string.Empty; LastSource = null; }
+                if (_amountMl == 0f) { _contentId = string.Empty; _contentType = FP_ContentType.None; LastSource = null; }
             }
             finally { _transferring = false; }
             if (accepted <= 0f) return 0f;
@@ -143,11 +159,38 @@ namespace FuzzPhyte.Tools
         private void Publish()
         {
             uint version = ++_version;
+            var previousType = _reportedType;
+            _reportedType = _contentType;
             bool full = capacityMl > 0f && _amountMl >= capacityMl;
             bool becameFull = full && !_reportedFull;
             _reportedFull = full;
+            PublishTypeEvents(previousType, full, becameFull, version);
+            if (version != _version) return;
             if (becameFull) OnFilled?.Invoke(this);
             if (version == _version) OnContentChanged?.Invoke(this);
+        }
+        private void PublishTypeEvents(FP_ContentType previous, bool full, bool becameFull, uint version)
+        {
+            bool changed = previous != _contentType;
+            if (changed && _contentType == FP_ContentType.Mixed) OnMixed?.Invoke(this);
+            if (version != _version) return;
+            if (changed && _contentType == FP_ContentType.None)
+                TypeEvent(previous, false)?.Invoke(this);
+            if (version != _version) return;
+            if (full && (becameFull || changed)) TypeEvent(_contentType, true)?.Invoke(this);
+            if (version != _version) return;
+            if (changed) OnContentTypeChanged?.Invoke(this);
+        }
+        private JarContentToolEvent TypeEvent(FP_ContentType type, bool filled)
+        {
+            switch (type)
+            {
+                case FP_ContentType.Type1: return filled ? OnType1Filled : OnType1Empty;
+                case FP_ContentType.Type2: return filled ? OnType2Filled : OnType2Empty;
+                case FP_ContentType.Type3: return filled ? OnType3Filled : OnType3Empty;
+                case FP_ContentType.Mixed: return filled ? OnMixedFilled : OnMixedEmpty;
+                default: return null;
+            }
         }
         private void OnValidate()
         {

@@ -58,7 +58,7 @@ namespace FuzzPhyte.Tools.Tests
         }
 
         [Test]
-        public void ToolRejectsDifferentFoodUntilEmptyAndJarKeepsItsIdentityWhenEmpty()
+        public void ToolCombinesDifferentTypesUntilEmptyAndJarKeepsItsSourceType()
         {
             var tool = Child("Knife").AddComponent<FP_JarContentTool>();
             Set(tool, "capacityMl", 10f);
@@ -66,8 +66,12 @@ namespace FuzzPhyte.Tools.Tests
             var other = Child("Other jar").AddComponent<FP_JarContent>();
             Set(other, "contentId", "Mayo");
             Invoke(other, "Awake");
-            Assert.That(other.TryTakeContent(tool), Is.Zero);
+            Set(other, "contentType", FP_ContentType.Type2);
+            Assert.That(other.TryTakeContent(tool), Is.EqualTo(5f));
+            Assert.That(tool.ContentType, Is.EqualTo(FP_ContentType.Mixed));
+            Assert.That(tool.ContentId, Is.EqualTo("Mixed"));
             tool.Empty();
+            Assert.That(tool.ContentType, Is.EqualTo(FP_ContentType.None));
             Assert.That(tool.ContentId, Is.Empty);
             Assert.That(other.TryTakeContent(tool), Is.EqualTo(5f));
             Assert.That(tool.ContentId, Is.EqualTo("Mayo"));

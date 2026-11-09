@@ -74,12 +74,8 @@ namespace FuzzPhyte.Tools.Tests
         }
 
         [Test]
-        public void PartialFullFilteredAndDisabledTargetsDoNotLoseRemainingContent()
+        public void PartialFullAndDisabledTargetsDoNotLoseRemainingContent()
         {
-            Set(_destination, "acceptedContentId", "Yogurt");
-            Assert.That(_tool.TryTransferContent(_destination), Is.Zero);
-            Assert.That(_tool.AmountMl, Is.EqualTo(5f));
-            Set(_destination, "acceptedContentId", "Mayo");
             _destination.enabled = false;
             Assert.That(_tool.TryTransferContent(_destination), Is.Zero);
             _destination.enabled = true;
