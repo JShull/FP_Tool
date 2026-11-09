@@ -6,6 +6,7 @@
 namespace FuzzPhyte.Tools.Tests
 {
     using System.Collections;
+    using System.Collections.Generic;
     using System.Reflection;
     using FuzzPhyte.Utility;
     using NUnit.Framework;
@@ -74,6 +75,10 @@ namespace FuzzPhyte.Tools.Tests
             var second = Bread("Second slice", Vector3.up * 0.6f);
             second.gameObject.AddComponent<BoxCollider>().size = Vector3.one * 0.2f;
             int entered = 0, exited = 0, cancelled = 0, finished = 0;
+            var enteredBodies = new List<Rigidbody>();
+            var exitedBodies = new List<Rigidbody>();
+            toaster.OnRigidbodyEntered.AddListener(enteredBodies.Add);
+            toaster.OnRigidbodyExited.AddListener(exitedBodies.Add);
             toaster.OnItemEntered.AddListener(t => entered++);
             toaster.OnItemExited.AddListener(t => exited++);
             toaster.OnCancelled.AddListener(t => cancelled++);
@@ -83,6 +88,7 @@ namespace FuzzPhyte.Tools.Tests
             yield return null;
             Assert.That(toaster.ItemCount, Is.EqualTo(2));
             Assert.That(entered, Is.EqualTo(2));
+            Assert.That(enteredBodies, Is.EquivalentTo(new[] { first.GetComponent<Rigidbody>(), second.GetComponent<Rigidbody>() }));
 
             toaster.StartToastingForSeconds(1f);
             toaster.Tick(0.25f);
@@ -92,6 +98,7 @@ namespace FuzzPhyte.Tools.Tests
             _scene.GetPhysicsScene().Simulate(0.02f);
             yield return null;
             Assert.That(toaster.ItemCount, Is.EqualTo(2));
+            Assert.That(exitedBodies, Is.Empty);
             second.transform.position = Vector3.right * 5f;
             Physics.SyncTransforms();
             _scene.GetPhysicsScene().Simulate(0.02f);
@@ -104,6 +111,7 @@ namespace FuzzPhyte.Tools.Tests
             _scene.GetPhysicsScene().Simulate(0.02f);
             Assert.That(toaster.IsToasting, Is.False);
             Assert.That(exited, Is.EqualTo(2));
+            Assert.That(exitedBodies, Is.EquivalentTo(enteredBodies));
             Assert.That(cancelled, Is.EqualTo(1));
 
             first.transform.position = Vector3.zero;
@@ -130,6 +138,10 @@ namespace FuzzPhyte.Tools.Tests
             _ticks.AddComponent<FP_TickSystem>();
             var toaster = Create("Toaster").AddComponent<FP_EquipmentToaster>();
             var bread = Create("Bread").AddComponent<FP_EnergyReactiveItem>();
+            var body = bread.gameObject.AddComponent<Rigidbody>();
+            body.isKinematic = true;
+            int bodyExits = 0;
+            toaster.OnRigidbodyExited.AddListener(b => { Assert.That(b, Is.SameAs(body)); bodyExits++; });
             toaster.AddItemToEquipment(bread);
             yield return null;
             toaster.StartToastingForSeconds(0.04f);
@@ -140,6 +152,7 @@ namespace FuzzPhyte.Tools.Tests
             toaster.StartToastingForSeconds(10f);
             toaster.enabled = false;
             Assert.That(toaster.ItemCount, Is.Zero);
+            Assert.That(bodyExits, Is.EqualTo(1));
             Assert.That(toaster.IsToasting, Is.False);
             toaster.enabled = true;
             toaster.AddItemToEquipment(bread);

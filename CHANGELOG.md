@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### [0.6.4] Added
 
+- Toaster Rigidbody enter/exit events with collider-owned body references retained
+  for departure, compound/overlapping-region deduplication, documentation, and tests.
+
 - Destination-transfer regions and a bread/final-surface receiver interface for
   jar-to-tool-to-destination workflows, partial acceptance, automatic tool reset,
   source metadata snapshots, and contact/received events with regression tests.

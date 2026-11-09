@@ -271,6 +271,7 @@ cycle progress, and `Status.TimerRemainingSec` exposes remaining time.
 | --- | --- |
 | `OnToastLevelChanged` | Update the knob/slider display. |
 | `OnItemEntered` / `OnItemExited` | Entry/exit feedback; the existing item OnEnteredEquipment/OnExitedEquipment callbacks also run. |
+| `OnRigidbodyEntered` / `OnRigidbodyExited` | Pass the item's Rigidbody once per logical entry/exit, including compound colliders and overlapping regions. |
 | `OnContentsChanged` | Refresh slot occupancy using ItemCount or Status.ContainedItemIds. |
 | `OnStarted` | Accepted start/lever-down feedback. |
 | `OnToasting` | Once per cycle: start heating glow and looping audio. |
@@ -281,7 +282,17 @@ cycle progress, and `Status.TimerRemainingSec` exposes remaining time.
 | `OnBroken` / `OnRepaired` | Condition feedback; repair does not restart. |
 | `OnStateChanged` | General equipment status updates. |
 
-Inspector events pass the toaster. Finishing/stopping does not physically move or
+The Rigidbody events pass `Rigidbody`; other toaster Inspector events pass the toaster.
+Bind a listener method with a `Rigidbody` parameter using the Inspector's **Dynamic
+Rigidbody** option, or subscribe in code with `toaster.OnRigidbodyEntered.AddListener(...)`.
+Trigger entry captures `Collider.attachedRigidbody`, including bodies owning child
+colliders; the same body is retained for exit even if the collider is removed.
+Programmatically added component items use their same-object/parent Rigidbody.
+Items without a Rigidbody still participate in containment and heat but do not
+raise these Rigidbody events. Disabling/removing the item, a final region contact,
+or the toaster releases the body; a destroyed Rigidbody cannot be passed to an
+exit listener. Each energy-reactive item should represent one physical body.
+Finishing/stopping does not physically move or
 remove items; connect your existing pop/eject animation to those events. Removing
 one of several items leaves the cycle running; removing the last cancels it.
 Newly inserted items receive only the remaining cycle's heat. Disabled/destroyed

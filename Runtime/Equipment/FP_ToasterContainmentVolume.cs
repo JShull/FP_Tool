@@ -34,7 +34,7 @@ namespace FuzzPhyte.Tools
             if (item == null || !item.isActiveAndEnabled) return;
             if (_contacts.TryGetValue(other, out var previous) && previous != item) RemoveContact(other);
             _contacts[other] = item;
-            toaster.EnterVolume(item, this);
+            toaster.EnterVolume(item, this, other.attachedRigidbody);
         }
 
         private void RemoveContact(Collider collider)
@@ -61,7 +61,8 @@ namespace FuzzPhyte.Tools
             foreach (var contact in _snapshot)
             {
                 if (!isActiveAndEnabled || toaster == null) break;
-                if (contact.Value != null && contact.Value.isActiveAndEnabled) toaster.EnterVolume(contact.Value, this);
+                if (contact.Key != null && contact.Value != null && contact.Value.isActiveAndEnabled)
+                    toaster.EnterVolume(contact.Value, this, contact.Key.attachedRigidbody);
                 else toaster.ExitVolume(contact.Value, this);
             }
         }

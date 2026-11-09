@@ -162,6 +162,11 @@ namespace FuzzPhyte.Tools.Tests
             var first = Volume();
             var second = Volume();
             var bread = Child("Bread").AddComponent<FP_EnergyReactiveItem>();
+            var body = bread.gameObject.AddComponent<Rigidbody>();
+            body.isKinematic = true;
+            int entered = 0, exited = 0;
+            _toaster.OnRigidbodyEntered.AddListener(b => { Assert.That(b, Is.SameAs(body)); entered++; });
+            _toaster.OnRigidbodyExited.AddListener(b => { Assert.That(b, Is.SameAs(body)); exited++; });
             var left = Child("Left collider");
             left.transform.SetParent(bread.transform, false);
             var leftCollider = left.AddComponent<BoxCollider>();
@@ -172,12 +177,60 @@ namespace FuzzPhyte.Tools.Tests
             Invoke(first, "OnTriggerEnter", rightCollider);
             Invoke(second, "OnTriggerEnter", rightCollider);
             Assert.That(_toaster.ItemCount, Is.EqualTo(1));
+            Assert.That(entered, Is.EqualTo(1));
             Invoke(first, "OnTriggerExit", leftCollider);
             Assert.That(_toaster.ItemCount, Is.EqualTo(1));
             Invoke(first, "OnTriggerExit", rightCollider);
             Assert.That(_toaster.ItemCount, Is.EqualTo(1));
+            Assert.That(exited, Is.Zero);
             Invoke(second, "OnDisable");
             Assert.That(_toaster.ItemCount, Is.Zero);
+            Assert.That(exited, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void RigidbodyEventsUseColliderBodyAndRetainItWhenColliderDisappears()
+        {
+            var region = Volume();
+            var marker = Child("Energy marker").AddComponent<FP_EnergyReactiveItem>();
+            var physicalChild = Child("Physical bread");
+            physicalChild.transform.SetParent(marker.transform, false);
+            var body = physicalChild.AddComponent<Rigidbody>();
+            body.isKinematic = true;
+            var collider = physicalChild.AddComponent<BoxCollider>();
+            int entered = 0, exited = 0;
+            _toaster.OnRigidbodyEntered.AddListener(b => { Assert.That(b, Is.SameAs(body)); entered++; });
+            _toaster.OnRigidbodyExited.AddListener(b => { Assert.That(b, Is.SameAs(body)); exited++; });
+            Invoke(region, "OnTriggerEnter", collider);
+            Object.DestroyImmediate(collider);
+            Invoke(region, "LateUpdate");
+            Invoke(region, "LateUpdate");
+            Assert.That(entered, Is.EqualTo(1));
+            Assert.That(exited, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void MultipleBodiesExitOnToasterDisableAndUnmarkedBodiesAreIgnored()
+        {
+            var region = Volume();
+            var entered = new List<Rigidbody>();
+            var exited = new List<Rigidbody>();
+            _toaster.OnRigidbodyEntered.AddListener(entered.Add);
+            _toaster.OnRigidbodyExited.AddListener(exited.Add);
+            for (int i = 0; i < 2; i++)
+            {
+                var bread = Child("Bread " + i);
+                bread.AddComponent<FP_EnergyReactiveItem>();
+                bread.AddComponent<Rigidbody>().isKinematic = true;
+                Invoke(region, "OnTriggerEnter", bread.AddComponent<BoxCollider>());
+            }
+            var unmarked = Child("Unmarked");
+            unmarked.AddComponent<Rigidbody>().isKinematic = true;
+            Invoke(region, "OnTriggerEnter", unmarked.AddComponent<BoxCollider>());
+            _toaster.AddItemToEquipment(new Item()); // Supported non-physics items have no Rigidbody event.
+            Assert.That(entered.Count, Is.EqualTo(2));
+            Invoke(_toaster, "OnDisable");
+            Assert.That(exited, Is.EquivalentTo(entered));
         }
 
         [Test]

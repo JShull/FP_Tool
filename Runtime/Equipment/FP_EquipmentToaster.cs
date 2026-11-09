@@ -11,6 +11,7 @@ namespace FuzzPhyte.Tools
     using UnityEngine.Events;
 
     [Serializable] public class ToasterEvent : UnityEvent<FP_EquipmentToaster> { }
+    [Serializable] public class ToasterRigidbodyEvent : UnityEvent<Rigidbody> { }
 
     /// <summary>One shared toast cycle; contained items receive heat through equipment ticks.</summary>
     public class FP_EquipmentToaster : FP_EquipmentTickableBase
@@ -26,6 +27,7 @@ namespace FuzzPhyte.Tools
         private bool _stopping;
         private readonly Dictionary<IFPContainedItem, HashSet<FP_ToasterContainmentVolume>> _volumes =
             new Dictionary<IFPContainedItem, HashSet<FP_ToasterContainmentVolume>>();
+        private readonly Dictionary<IFPContainedItem, Rigidbody> _rigidbodies = new Dictionary<IFPContainedItem, Rigidbody>();
 
         public float ToastLevel => toastLevel;
         public float ToastDurationSeconds => Mathf.Lerp(lightToastSeconds, darkToastSeconds, toastLevel);
@@ -45,6 +47,8 @@ namespace FuzzPhyte.Tools
         public ToasterEvent OnContentsChanged = new ToasterEvent();
         public ToasterEvent OnItemEntered = new ToasterEvent();
         public ToasterEvent OnItemExited = new ToasterEvent();
+        public ToasterRigidbodyEvent OnRigidbodyEntered = new ToasterRigidbodyEvent();
+        public ToasterRigidbodyEvent OnRigidbodyExited = new ToasterRigidbodyEvent();
         public ToasterEvent OnBroken = new ToasterEvent();
         public ToasterEvent OnRepaired = new ToasterEvent();
         public ToasterEvent OnStateChanged = new ToasterEvent();
@@ -138,7 +142,17 @@ namespace FuzzPhyte.Tools
         protected override void AddContainedItem(IFPContainedItem item)
         {
             if (!IsUsable(item) || _containedItems.Contains(item)) return;
+            _rigidbodies.TryGetValue(item, out var body);
+            _rigidbodies.Remove(item);
+            if (body == null && item is Component component) body = component.GetComponentInParent<Rigidbody>();
             base.AddContainedItem(item);
+            if (!_containedItems.Contains(item)) return;
+            if (body != null)
+            {
+                _rigidbodies[item] = body;
+                OnRigidbodyEntered?.Invoke(body);
+            }
+            if (!_containedItems.Contains(item)) return;
             OnItemEntered?.Invoke(this);
             OnContentsChanged?.Invoke(this);
         }
@@ -146,14 +160,17 @@ namespace FuzzPhyte.Tools
         protected override void RemoveContainedItem(IFPContainedItem item)
         {
             if (item == null || !_containedItems.Contains(item)) return;
+            _rigidbodies.TryGetValue(item, out var body);
+            _rigidbodies.Remove(item);
             _volumes.Remove(item);
             base.RemoveContainedItem(item);
             if (ItemCount == 0) StopToasting();
             OnItemExited?.Invoke(this);
+            if (body != null) OnRigidbodyExited?.Invoke(body);
             OnContentsChanged?.Invoke(this);
         }
 
-        internal void EnterVolume(FP_EnergyReactiveItem item, FP_ToasterContainmentVolume volume)
+        internal void EnterVolume(FP_EnergyReactiveItem item, FP_ToasterContainmentVolume volume, Rigidbody body)
         {
             if (!isActiveAndEnabled || !IsUsable(item)) return;
             if (!_volumes.TryGetValue(item, out var volumes))
@@ -162,6 +179,7 @@ namespace FuzzPhyte.Tools
                 _volumes.Add(item, volumes);
             }
             volumes.Add(volume);
+            if (!_containedItems.Contains(item) && body != null) _rigidbodies[item] = body;
             AddItemToEquipment(item);
         }
 
